@@ -1,0 +1,570 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useIEStore } from "@/store/ie-store";
+import { getHistoricalMoeData } from "@/lib/gcc-mock-data";
+import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  ReferenceLine,
+} from "recharts";
+
+// ── MOE definitions — formula, data inputs, cadence, known biases ──────────
+// These must be visible to any analyst reading the running estimate so they
+// understand WHAT is being measured and HOW scores are derived.
+const MOE_DEFINITIONS: Record<string, { formula: string; inputs: string; cadence: string; biasRisk: string }> = {
+  "MOE-1": {
+    formula: "% of sampled content in monitored channels attributed to adversary narrative",
+    inputs: "SOCMINT platform scrape (Telegram/WeChat/CGTN); OSINT media monitoring",
+    cadence: "Every 6 hours; 24hr rolling average",
+    biasRisk: "Platform sampling bias; adversary may shift to unmonitored channels; language coverage gaps",
+  },
+  "MOE-2": {
+    formula: "% of surveyed/monitored population expressing favorable sentiment toward friendly forces",
+    inputs: "Social media sentiment analysis + available polling data + HUMINT reports",
+    cadence: "Daily; lags real opinion by 24-72h",
+    biasRisk: "Self-reporting bias; bots may inflate apparent hostile sentiment; no direct survey in active AO",
+  },
+  "MOE-3": {
+    formula: "Count of confirmed adversary IO actions detected per 24-hour period",
+    inputs: "SIGINT, CYBERCOM indicators, SOCMINT anomaly detection, HUMINT reporting",
+    cadence: "Every 4 hours",
+    biasRisk: "Detection-limited: undetected actions not counted; may reflect collection quality not actual activity",
+  },
+  "MOE-4": {
+    formula: "Ratio of friendly-attributed content to adversary-attributed content in target information space",
+    inputs: "OSINT media volume monitoring; PA/MISO product tracking",
+    cadence: "Every 12 hours",
+    biasRisk: "Quantity ≠ quality; viral adversary content may outperform higher-volume friendly content",
+  },
+  "MOE-5": {
+    formula: "Ally confidence index (0-100) derived from liaison reports + partner nation media + diplomatic channels",
+    inputs: "Liaison officer reports; partner nation media analysis; embassy reporting",
+    cadence: "Weekly; high latency",
+    biasRisk: "Diplomatic reporting lag; allies may underreport concerns; limited to official channels",
+  },
+  "MOE-6": {
+    formula: "% of identified deepfake/synthetic media items successfully removed from monitored platforms",
+    inputs: "AI-assisted detection log; platform takedown request tracking system",
+    cadence: "Continuous; updated on detection event",
+    biasRisk: "Detection-limited: undetected deepfakes excluded; platform compliance varies by jurisdiction",
+  },
+};
+
+// ── Running Estimate Version History ──────────────────────────────────────
+interface REVersion {
+  version: string;       // e.g. "v1.0"
+  savedAt: string;       // ISO
+  analystInitials: string;
+  ieCondition: string;
+  ieSituationSnap: string;
+  moeSnapshot: Array<{ id: string; current: number; status: string }>;
+  changeNote: string;
+}
+
+export function RunningEstimateModule() {
+  const { runningEstimate, moeMetrics, mopMetrics, activeGCC } = useIEStore();
+  const historicalMoeData = getHistoricalMoeData(activeGCC);
+  const [showMoeDefs, setShowMoeDefs] = useState(false);
+  const [showHandover, setShowHandover] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
+  const [versions, setVersions] = useState<REVersion[]>([
+    // Seed with a "v1.0" baseline so there's always a prior version to compare
+    {
+      version: "v1.0",
+      savedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8h ago
+      analystInitials: "JDO",
+      ieCondition: runningEstimate.ieCondition,
+      ieSituationSnap: runningEstimate.ieSituation.substring(0, 200),
+      moeSnapshot: moeMetrics.map((m) => ({ id: m.id, current: m.current, status: m.status })),
+      changeNote: "Initial baseline — watch handover from 0600Z shift",
+    },
+  ]);
+  const [changeNote, setChangeNote] = useState("");
+  const [analystInitials, setAnalystInitials] = useState("IO");
+  const [showDiff, setShowDiff] = useState<string | null>(null); // version string to show diff for
+
+  // Client-only timestamp — avoids SSR/hydration mismatch
+  const [nowDTG, setNowDTG] = useState<string | null>(null);
+  useEffect(() => { setNowDTG(new Date().toISOString().substring(0, 16)); }, []);
+
+  const currentVersionLabel = `v${(1 + versions.length).toFixed(1)}`;
+
+  const saveVersion = () => {
+    const newVer: REVersion = {
+      version: currentVersionLabel,
+      savedAt: new Date().toISOString(),
+      analystInitials,
+      ieCondition: runningEstimate.ieCondition,
+      ieSituationSnap: runningEstimate.ieSituation.substring(0, 200),
+      moeSnapshot: moeMetrics.map((m) => ({ id: m.id, current: m.current, status: m.status })),
+      changeNote: changeNote || "No change note provided",
+    };
+    setVersions((v) => [...v, newVer]);
+    setChangeNote("");
+    setShowVersions(true);
+  };
+
+  const ieConditionColor =
+    runningEstimate.ieCondition === "HOSTILE"
+      ? "#ef4444"
+      : runningEstimate.ieCondition === "UNCERTAIN"
+      ? "#f59e0b"
+      : "#10b981";
+
+  return (
+    <div className="p-4 overflow-y-auto h-full space-y-4">
+      {/* Header */}
+      <div className="tactical-card p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[10px] text-[#475569] font-mono tracking-widest">{runningEstimate.classification}</div>
+            <div className="text-[#00d4ff] text-lg font-black tracking-widest mt-1">
+              RUNNING ESTIMATE — INFORMATION OPERATIONS
+            </div>
+            <div className="text-[#94a3b8] text-sm mt-0.5">{runningEstimate.operationName}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[#475569] text-[10px] font-mono">DTG:</div>
+            <div className="text-[#00d4ff] font-mono text-sm">{runningEstimate.dtg}</div>
+            <div className="mt-2 px-3 py-1 border rounded text-sm font-bold" style={{ borderColor: ieConditionColor, color: ieConditionColor }}>
+              IE: {runningEstimate.ieCondition}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 p-3 bg-[#070d1a] border border-[#1e3a5f] rounded">
+          <div className="text-[#475569] text-[10px] tracking-wider mb-1">MISSION STATEMENT</div>
+          <div className="text-[#e2e8f0] text-xs leading-relaxed">{runningEstimate.missionStatement}</div>
+        </div>
+
+        <div className="mt-3 p-3 bg-[#070d1a] border border-[#1e3a5f] rounded">
+          <div className="text-[#475569] text-[10px] tracking-wider mb-1">CDRU OBJECTIVE</div>
+          <div className="text-[#00d4ff] text-xs leading-relaxed">{runningEstimate.cdruObjective}</div>
+        </div>
+
+        {/* ── Version control bar ─────────────────────────────────────── */}
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#475569] text-[9px] font-mono">ANALYST:</span>
+            <input
+              type="text"
+              value={analystInitials}
+              onChange={(e) => setAnalystInitials(e.target.value.substring(0, 4).toUpperCase())}
+              className="w-12 px-1 py-0.5 bg-[#070d1a] border border-[#1e3a5f] rounded text-[9px] text-[#e2e8f0] focus:outline-none focus:border-[#0891b2] font-mono text-center"
+              placeholder="JDO"
+            />
+          </div>
+          <input
+            type="text"
+            value={changeNote}
+            onChange={(e) => setChangeNote(e.target.value)}
+            placeholder={`Change note for ${currentVersionLabel}...`}
+            className="flex-1 min-w-[180px] px-2 py-0.5 bg-[#070d1a] border border-[#1e3a5f] rounded text-[9px] text-[#e2e8f0] placeholder-[#334155] focus:outline-none focus:border-[#0891b2] font-mono"
+          />
+          <button
+            onClick={saveVersion}
+            className="px-2 py-0.5 text-[9px] border border-[#00d4ff] text-[#00d4ff] rounded hover:bg-[#00d4ff15] font-mono font-bold whitespace-nowrap"
+          >
+            SAVE {currentVersionLabel}
+          </button>
+          <button
+            onClick={() => setShowVersions(!showVersions)}
+            className="px-2 py-0.5 text-[9px] border border-[#1e3a5f] text-[#475569] rounded hover:border-[#334155] font-mono"
+          >
+            HISTORY ({versions.length}) {showVersions ? "▲" : "▼"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Version History Panel ────────────────────────────────────── */}
+      {showVersions && (
+        <div className="tactical-card p-4">
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">RUNNING ESTIMATE VERSION HISTORY</div>
+          <div className="space-y-2">
+            {[...versions].reverse().map((ver, idx) => {
+              const prev = [...versions].reverse()[idx + 1] ?? null;
+              const moeChanges = prev
+                ? ver.moeSnapshot.filter((m) => {
+                    const prevMoe = prev.moeSnapshot.find((p) => p.id === m.id);
+                    return prevMoe && prevMoe.status !== m.status;
+                  })
+                : [];
+              const ieChanged = prev && prev.ieCondition !== ver.ieCondition;
+              return (
+                <div key={ver.version} className="p-3 border border-[#1e3a5f] rounded bg-[#070d1a]">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#00d4ff] text-[10px] font-black font-mono">{ver.version}</span>
+                      <span className="text-[#475569] text-[9px] font-mono">{ver.savedAt.substring(0, 16)}Z</span>
+                      <span className="px-1.5 py-0.5 border border-[#1e3a5f] text-[#94a3b8] rounded text-[9px] font-mono">{ver.analystInitials}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border"
+                        style={{
+                          color: ver.ieCondition === "HOSTILE" ? "#ef4444" : ver.ieCondition === "UNCERTAIN" ? "#f59e0b" : "#10b981",
+                          borderColor: ver.ieCondition === "HOSTILE" ? "#ef4444" : ver.ieCondition === "UNCERTAIN" ? "#f59e0b" : "#10b981",
+                        }}>
+                        IE: {ver.ieCondition}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowDiff(showDiff === ver.version ? null : ver.version)}
+                      className="text-[9px] text-[#475569] border border-[#1e3a5f] px-1.5 py-0.5 rounded hover:border-[#334155] font-mono"
+                    >
+                      {showDiff === ver.version ? "HIDE DIFF" : "DIFF ▼"}
+                    </button>
+                  </div>
+                  <div className="text-[#94a3b8] text-[9px] mt-1 font-mono italic">{ver.changeNote}</div>
+
+                  {/* Diff view */}
+                  {showDiff === ver.version && (
+                    <div className="mt-2 space-y-1.5">
+                      {ieChanged && (
+                        <div className="text-[9px] font-mono p-1.5 bg-[#f59e0b08] border border-[#f59e0b30] rounded">
+                          <span className="text-[#f59e0b]">Δ IE CONDITION: </span>
+                          <span className="text-[#ef4444]">{prev?.ieCondition ?? "—"}</span>
+                          <span className="text-[#475569]"> → </span>
+                          <span className="text-[#10b981]">{ver.ieCondition}</span>
+                        </div>
+                      )}
+                      {moeChanges.length > 0 ? (
+                        <div className="space-y-1">
+                          {moeChanges.map((m) => {
+                            const prevMoe = prev?.moeSnapshot.find((p) => p.id === m.id);
+                            return (
+                              <div key={m.id} className="text-[9px] font-mono p-1 bg-[#060d1a] border border-[#1e3a5f] rounded flex items-center gap-2">
+                                <span className="text-[#475569]">{m.id}:</span>
+                                <span className="text-[#ef4444]">{prevMoe?.status ?? "—"}</span>
+                                <span className="text-[#475569]">→</span>
+                                <span className="text-[#10b981]">{m.status}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-[#334155] font-mono">No MOE status changes from previous version.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* IE Situation + Trend Charts */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Situation Narrative */}
+        <div className="tactical-card p-4">
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">IE SITUATION ASSESSMENT</div>
+          <div className="text-[#e2e8f0] text-xs leading-relaxed mb-4">{runningEstimate.ieSituation}</div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[#ef4444] text-[10px] font-bold tracking-wider mb-2">ADVERSARY CAPABILITIES</div>
+              <ul className="space-y-1">
+                {runningEstimate.adversaryCapabilities.map((cap, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-[#94a3b8]">
+                    <span className="text-[#ef4444] mt-0.5 flex-shrink-0">▸</span>
+                    {cap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className="text-[#10b981] text-[10px] font-bold tracking-wider mb-2">FRIENDLY CAPABILITIES</div>
+              <ul className="space-y-1">
+                {runningEstimate.friendlyCapabilities.map((cap, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-[#94a3b8]">
+                    <span className="text-[#10b981] mt-0.5 flex-shrink-0">▸</span>
+                    {cap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* MOE Trend Chart */}
+        <div className="tactical-card p-4">
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">RECOMMENDED MOE TREND — 30 DAY CAMPAIGN</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={historicalMoeData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <CartesianGrid stroke="#1e3a5f" strokeDasharray="3 3" />
+              <XAxis
+                dataKey="day"
+                tick={{ fill: "#475569", fontSize: 9 }}
+                interval={9}
+              />
+              <YAxis tick={{ fill: "#475569", fontSize: 9 }} />
+              <Tooltip
+                contentStyle={{
+                  background: "#0f1829",
+                  border: "1px solid #1e3a5f",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  color: "#e2e8f0",
+                }}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: "10px", color: "#94a3b8" }}
+              />
+              <ReferenceLine y={50} stroke="#10b981" strokeDasharray="4 2" label={{ value: "Sentiment Target", fill: "#10b981", fontSize: 9 }} />
+              <Line type="monotone" dataKey="hostileReach" stroke="#ef4444" name="Hostile Reach%" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="sentiment" stroke="#10b981" name="Friendly Sentiment%" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="adversaryActivity" stroke="#f59e0b" name="Adv. IO Actions/day" dot={false} strokeWidth={1.5} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Assumptions / Limitations / Risks */}
+      <div className="grid grid-cols-3 gap-4">
+        <InfoList title="PLANNING ASSUMPTIONS" items={runningEstimate.assumptions} color="#2288ff" icon="◈" />
+        <InfoList title="LIMITATIONS" items={runningEstimate.limitations} color="#f59e0b" icon="⚑" />
+        <InfoList title="RISK ASSESSMENT" items={runningEstimate.risks} color="#ef4444" icon="⚠" />
+      </div>
+
+      {/* Recommendations */}
+      <div className="tactical-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest">ANALYST RECOMMENDATIONS</div>
+          <div className="text-[9px] px-2 py-0.5 border border-[#00d4ff50] text-[#00d4ff] rounded font-mono tracking-wider">
+            IO DOCTRINE BASIS: JP 3-13 / FM 3-13
+          </div>
+        </div>
+        <div className="space-y-2">
+          {runningEstimate.recommendations.map((rec, i) => {
+            const isImmediate = rec.startsWith("IMMEDIATE");
+            const isUrgent = rec.startsWith("URGENT");
+            const isPriority = rec.startsWith("PRIORITY");
+            const color = isImmediate ? "#ef4444" : isUrgent ? "#f59e0b" : isPriority ? "#2288ff" : "#00d4ff";
+            const label = isImmediate ? "IMMEDIATE" : isUrgent ? "URGENT" : isPriority ? "PRIORITY" : "SUSTAIN";
+            return (
+              <div key={i} className="flex items-start gap-2 p-2 bg-[#070d1a] border border-[#1e3a5f] rounded">
+                <span className="px-1.5 py-0.5 text-[9px] font-black rounded flex-shrink-0 mt-0.5"
+                  style={{ color, background: `${color}20`, border: `1px solid ${color}60` }}>
+                  {label}
+                </span>
+                <span className="text-xs text-[#e2e8f0]">{rec}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 text-[#475569] text-[10px] font-mono text-right">
+          ANALYST REVIEW REQUIRED BEFORE COMMANDER BRIEFING // {nowDTG ? `${nowDTG}Z` : "—"}
+        </div>
+      </div>
+
+      {/* ── Shift Handover Summary ──────────────────────────────────── */}
+      <div className="tactical-card flex-shrink-0">
+        <button
+          onClick={() => setShowHandover((v) => !v)}
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#162035] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[#2288ff]">⇄</span>
+            <div className="text-left">
+              <div className="text-[#2288ff] text-xs font-bold tracking-widest">SHIFT HANDOVER — WATCH SUMMARY</div>
+              <div className="text-[#475569] text-[9px] font-mono">Key changes since last assessment · analyst sign-off required</div>
+            </div>
+          </div>
+          <span className="text-[#475569] text-xs font-mono">{showHandover ? "▲ HIDE" : "▼ SHOW"}</span>
+        </button>
+        {showHandover && (
+          <div className="border-t border-[#1e3a5f] p-4 space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-[#070d1a] border border-[#ef444430] rounded">
+                <div className="text-[#ef4444] text-[10px] font-bold tracking-wider mb-2">🔴 DETERIORATED SINCE LAST WATCH</div>
+                <ul className="space-y-1">
+                  {moeMetrics.filter((m) => m.status === "RED").map((m) => (
+                    <li key={m.id} className="text-[10px] text-[#94a3b8]">
+                      <span className="text-[#ef4444]">▸</span> {m.name}: {m.current}{m.unit} (target {m.target})
+                    </li>
+                  ))}
+                  {moeMetrics.filter((m) => m.status === "RED").length === 0 && (
+                    <li className="text-[10px] text-[#475569]">None — all MOEs at or above threshold.</li>
+                  )}
+                </ul>
+              </div>
+              <div className="p-3 bg-[#070d1a] border border-[#f59e0b30] rounded">
+                <div className="text-[#f59e0b] text-[10px] font-bold tracking-wider mb-2">🟡 WATCH ITEMS</div>
+                <ul className="space-y-1">
+                  {moeMetrics.filter((m) => m.status === "AMBER").map((m) => (
+                    <li key={m.id} className="text-[10px] text-[#94a3b8]">
+                      <span className="text-[#f59e0b]">▸</span> {m.name}: trend {m.trend}
+                    </li>
+                  ))}
+                  {moeMetrics.filter((m) => m.status === "AMBER").length === 0 && (
+                    <li className="text-[10px] text-[#475569]">None — no AMBER MOEs.</li>
+                  )}
+                </ul>
+              </div>
+              <div className="p-3 bg-[#070d1a] border border-[#10b98130] rounded">
+                <div className="text-[#10b981] text-[10px] font-bold tracking-wider mb-2">🟢 SUSTAINED / POSITIVE</div>
+                <ul className="space-y-1">
+                  {moeMetrics.filter((m) => m.status === "GREEN").map((m) => (
+                    <li key={m.id} className="text-[10px] text-[#94a3b8]">
+                      <span className="text-[#10b981]">▸</span> {m.name}: on track
+                    </li>
+                  ))}
+                  {moeMetrics.filter((m) => m.status === "GREEN").length === 0 && (
+                    <li className="text-[10px] text-[#475569]">No GREEN MOEs — IE condition critical.</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+            <div className="p-2.5 border border-[#1e3a5f] rounded bg-[#070d1a] flex items-center gap-3">
+              <span className="text-[#f59e0b] text-[10px]">⚑</span>
+              <div className="text-[10px] text-[#94a3b8] flex-1">
+                <span className="text-[#f59e0b] font-bold">ANALYST SIGN-OFF REQUIRED: </span>
+                Outgoing watch officer must review and annotate this summary before handover. Incoming watch officer must acknowledge. This panel does not replace the written ITREP.
+              </div>
+              <button className="text-[9px] border border-[#0891b2] text-[#00d4ff] px-2 py-1 rounded hover:bg-[#0891b215] font-mono flex-shrink-0">
+                ACKNOWLEDGE HANDOVER
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── MOE Definition Cards (scoring transparency) ──────────── */}
+      <div className="tactical-card flex-shrink-0">
+        <button
+          onClick={() => setShowMoeDefs((v) => !v)}
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#162035] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[#00d4ff]">◈</span>
+            <div className="text-left">
+              <div className="text-[#00d4ff] text-xs font-bold tracking-widest">MOE SCORING BASIS — DEFINITION CARDS</div>
+              <div className="text-[#475569] text-[9px] font-mono">Formula, data inputs, collection cadence, and known bias risks for each MOE</div>
+            </div>
+          </div>
+          <span className="text-[#475569] text-xs font-mono">{showMoeDefs ? "▲ HIDE" : "▼ SHOW"}</span>
+        </button>
+        {showMoeDefs && (
+          <div className="border-t border-[#1e3a5f] p-4 grid grid-cols-2 gap-3">
+            {moeMetrics.map((moe) => {
+              const def = MOE_DEFINITIONS[moe.id];
+              const statusColor = { GREEN: "#10b981", AMBER: "#f59e0b", RED: "#ef4444" }[moe.status];
+              return (
+                <div key={moe.id} className="p-3 bg-[#070d1a] border border-[#1e3a5f] rounded hover:border-[#1e3a5f80] transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <span className="text-[#475569] text-[9px] font-mono">{moe.id}</span>
+                      <div className="text-xs font-bold text-[#e2e8f0]">{moe.name}</div>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border flex-shrink-0"
+                      style={{ color: statusColor, borderColor: statusColor, background: `${statusColor}15` }}>
+                      {moe.status}
+                    </span>
+                  </div>
+                  {def ? (
+                    <dl className="space-y-1 text-[9px]">
+                      <div><dt className="text-[#475569] inline">FORMULA: </dt><dd className="text-[#94a3b8] inline">{def.formula}</dd></div>
+                      <div><dt className="text-[#475569] inline">INPUTS: </dt><dd className="text-[#94a3b8] inline">{def.inputs}</dd></div>
+                      <div><dt className="text-[#475569] inline">CADENCE: </dt><dd className="text-[#94a3b8] inline">{def.cadence}</dd></div>
+                      <div><dt className="text-[#ef4444] inline">BIAS RISK: </dt><dd className="text-[#94a3b8] inline">{def.biasRisk}</dd></div>
+                    </dl>
+                  ) : (
+                    <div className="text-[9px] text-[#334155] font-mono italic">Definition pending — analyst must document before operational use.</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* MOP Tracking Table */}
+      <div className="tactical-card">
+        <div className="px-4 py-3 border-b border-[#1e3a5f] flex items-center justify-between">
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest">RECOMMENDED MEASURES OF PERFORMANCE</div>
+          <div className="text-[9px] px-2 py-0.5 border border-[#f59e0b50] text-[#f59e0b] rounded font-mono tracking-wider">
+            TASK EXECUTION STATUS
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs font-mono">
+            <thead>
+              <tr className="border-b border-[#1e3a5f] text-[#475569] text-[10px] tracking-wider">
+                <th className="text-left px-4 py-2">MOP</th>
+                <th className="text-left px-4 py-2">CAPABILITY</th>
+                <th className="text-left px-4 py-2">TASK</th>
+                <th className="text-left px-4 py-2">PLANNED</th>
+                <th className="text-left px-4 py-2">ACTUAL</th>
+                <th className="text-left px-4 py-2">COMPLETION</th>
+                <th className="text-left px-4 py-2">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mopMetrics.map((mop) => {
+                const pct = Math.min(100, Math.round((mop.actual / mop.planned) * 100));
+                const statusColor = { GREEN: "#10b981", AMBER: "#f59e0b", RED: "#ef4444" }[mop.status];
+                return (
+                  <tr key={mop.id} className="border-b border-[#1e3a5f] hover:bg-[#162035]">
+                    <td className="px-4 py-2.5 text-[#94a3b8]">{mop.id}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="px-1.5 py-0.5 border border-[#0891b2] text-[#00d4ff] rounded text-[10px]">
+                        {mop.capability}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-[#e2e8f0]">{mop.task}</td>
+                    <td className="px-4 py-2.5 text-[#94a3b8]">{mop.planned} {mop.unit}</td>
+                    <td className="px-4 py-2.5 font-bold" style={{ color: statusColor }}>{mop.actual} {mop.unit}</td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="confidence-bar w-16">
+                          <div className="confidence-fill" style={{ width: `${pct}%`, background: statusColor }} />
+                        </div>
+                        <span style={{ color: statusColor }}>{pct}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                        style={{ color: statusColor, borderColor: statusColor, background: `${statusColor}15` }}>
+                        {mop.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── IO Glossary / Dictionary ───────────────────────────────── */}
+      <GlossaryPanel module="running-estimate" />
+    </div>
+  );
+}
+
+function InfoList({ title, items, color, icon }: {
+  title: string;
+  items: string[];
+  color: string;
+  icon: string;
+}) {
+  return (
+    <div className="tactical-card p-4">
+      <div className="text-xs font-bold tracking-widest mb-3" style={{ color }}>{title}</div>
+      <ul className="space-y-2">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-[10px] text-[#94a3b8]">
+            <span style={{ color }} className="flex-shrink-0 mt-0.5">{icon}</span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
