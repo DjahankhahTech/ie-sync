@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           http_status: checkResult.http_status,
           resolved_url: checkResult.resolved_url,
           archived_snapshot_url:
-            checkResult.status === "DEAD" || checkResult.status === "BLOCKED" || checkResult.status === "RESTRICTED_GOV"
+            checkResult.status === "DEAD" || checkResult.status === "BLOCKED"
               ? getArchiveUrl(canonical)
               : null,
           checked_at: new Date().toISOString(),
@@ -84,13 +84,12 @@ export async function POST(request: NextRequest) {
     const redirected = results.filter((r) => r.status === "REDIRECTED").length;
     const dead = results.filter((r) => r.status === "DEAD").length;
     const blocked = results.filter((r) => r.status === "BLOCKED").length;
-    const restricted_gov = results.filter((r) => r.status === "RESTRICTED_GOV").length;
 
     return NextResponse.json({
       checked_at: new Date().toISOString(),
       total,
-      summary: { ok, redirected, dead, blocked, restricted_gov },
-      health_rate: total > 0 ? Math.round(((ok + redirected + restricted_gov) / total) * 100) : 100,
+      summary: { ok, redirected, dead, blocked },
+      health_rate: total > 0 ? Math.round(((ok + redirected) / total) * 100) : 100,
       results,
     });
   } catch {
@@ -128,7 +127,7 @@ export async function GET(request: NextRequest) {
     http_status: checkResult.http_status,
     resolved_url: checkResult.resolved_url,
     archived_snapshot_url:
-      checkResult.status === "DEAD" || checkResult.status === "BLOCKED" || checkResult.status === "RESTRICTED_GOV"
+      checkResult.status === "DEAD" || checkResult.status === "BLOCKED"
         ? getArchiveUrl(canonical)
         : null,
     checked_at: new Date().toISOString(),

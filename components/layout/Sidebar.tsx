@@ -12,6 +12,11 @@ const modules = [
   { id: "coa", label: "COA ENGINE", subtitle: "Decision Support", icon: "◆" },
   { id: "sigman", label: "SIGMAN MONITOR", subtitle: "Signature Mgmt", icon: "◎" },
   { id: "annex", label: "ANNEX GENERATOR", subtitle: "Annex I / ITCO", icon: "◧" },
+  { id: "conceal-reveal", label: "CONCEAL/REVEAL", subtitle: "JP 3-13.3 Posture", icon: "◐" },
+  { id: "signature-mgmt", label: "SIG MANAGEMENT", subtitle: "EMCON/OPSEC/SATVUL", icon: "◑" },
+  { id: "adversary-perceptions", label: "ADV PERCEPTIONS", subtitle: "State Media Analysis", icon: "◒" },
+  { id: "gray-zone", label: "GRAY ZONE", subtitle: "Sub-Threshold Activity", icon: "◓" },
+  { id: "abmd", label: "ABMD FUSION", subtitle: "Missile Defense OSINT", icon: "◈" },
 ];
 
 export function Sidebar() {

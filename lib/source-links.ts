@@ -12,18 +12,16 @@
  *   - HTTP status code and last check timestamp
  *
  * Dashboard behavior per spec:
- *   OK             → open normally
- *   REDIRECTED     → open with ⚠ badge + show both URLs
- *   DEAD           → show ✕ badge + "Source unavailable" + archive link if exists
- *   BLOCKED        → show 🔒 badge + "Paywalled/geo-blocked" + archive link
- *   RESTRICTED_GOV → show 🔐 badge + "Restricted (DoD)" — .mil/.gov 403s
- *   INTERNAL       → show 🏛 badge + "Internal System" — no URL, internal/classified
- *   UNCHECKED      → show ⏳ badge + "Checking..."
+ *   OK         → open normally
+ *   REDIRECTED → open with ⚠ badge + show both URLs
+ *   DEAD       → show ✕ badge + "Source unavailable" + archive link if exists
+ *   BLOCKED    → show 🔒 badge + "Paywalled/geo-blocked" + archive link
+ *   UNCHECKED  → show ⏳ badge + "Checking..."
  */
 
 // ── SourceLink Model ─────────────────────────────────────────────────────────
 
-export type LinkStatus = "OK" | "REDIRECTED" | "DEAD" | "BLOCKED" | "RESTRICTED_GOV" | "INTERNAL" | "UNCHECKED";
+export type LinkStatus = "OK" | "REDIRECTED" | "DEAD" | "BLOCKED" | "UNCHECKED";
 
 export interface SourceLink {
   /** Unique ID for this link record */
@@ -122,24 +120,6 @@ export function extractPublisher(url: string): string {
   }
 }
 
-// ── Restricted Government Domain Detection ───────────────────────────────────
-
-/** Domains that return 403 for public access but are not paywalled — they're restricted DoD/gov sites. */
-const RESTRICTED_GOV_TLDS = [".mil", ".gov"];
-
-/**
- * Returns true if the URL belongs to a restricted government/military domain.
- * These sites often return 403 for legitimate security reasons, not paywalls.
- */
-export function isRestrictedGovDomain(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return RESTRICTED_GOV_TLDS.some((tld) => host.endsWith(tld));
-  } catch {
-    return false;
-  }
-}
-
 // ── Link Health Check ────────────────────────────────────────────────────────
 
 export interface LinkCheckResult {
@@ -205,9 +185,6 @@ export async function checkLinkHealth(url: string): Promise<LinkCheckResult> {
     }
 
     if (httpStatus === 403) {
-      if (isRestrictedGovDomain(url)) {
-        return { status: "RESTRICTED_GOV", http_status: httpStatus, resolved_url: null, is_soft_error: false };
-      }
       return { status: "BLOCKED", http_status: httpStatus, resolved_url: null, is_soft_error: false };
     }
 
@@ -295,7 +272,7 @@ export function upsertSourceLink(
       existing.http_status = checkResult.http_status;
       existing.resolved_url = checkResult.resolved_url;
       existing.last_checked_at = new Date().toISOString();
-      if (checkResult.status === "DEAD" || checkResult.status === "BLOCKED" || checkResult.status === "RESTRICTED_GOV") {
+      if (checkResult.status === "DEAD" || checkResult.status === "BLOCKED") {
         existing.archived_snapshot_url = getArchiveUrl(canonical);
       }
     }
@@ -312,7 +289,7 @@ export function upsertSourceLink(
     status: checkResult?.status ?? "UNCHECKED",
     http_status: checkResult?.http_status ?? null,
     archived_snapshot_url:
-      checkResult?.status === "DEAD" || checkResult?.status === "BLOCKED" || checkResult?.status === "RESTRICTED_GOV"
+      checkResult?.status === "DEAD" || checkResult?.status === "BLOCKED"
         ? getArchiveUrl(canonical)
         : null,
     first_seen_at: new Date().toISOString(),
@@ -352,8 +329,6 @@ export function getLinkHealthStats(): {
   redirected: number;
   dead: number;
   blocked: number;
-  restricted_gov: number;
-  internal: number;
   unchecked: number;
   healthRate: number;
 } {
@@ -363,14 +338,11 @@ export function getLinkHealthStats(): {
   const redirected = all.filter((l) => l.status === "REDIRECTED").length;
   const dead = all.filter((l) => l.status === "DEAD").length;
   const blocked = all.filter((l) => l.status === "BLOCKED").length;
-  const restricted_gov = all.filter((l) => l.status === "RESTRICTED_GOV").length;
-  const internal = all.filter((l) => l.status === "INTERNAL").length;
   const unchecked = all.filter((l) => l.status === "UNCHECKED").length;
-  // RESTRICTED_GOV and INTERNAL are "expected" statuses — count as healthy
-  const checked = total - unchecked - internal;
-  const healthRate = checked > 0 ? Math.round(((ok + redirected + restricted_gov) / checked) * 100) : 100;
+  const checked = total - unchecked;
+  const healthRate = checked > 0 ? Math.round(((ok + redirected) / checked) * 100) : 100;
 
-  return { total, ok, redirected, dead, blocked, restricted_gov, internal, unchecked, healthRate };
+  return { total, ok, redirected, dead, blocked, unchecked, healthRate };
 }
 
 // ── UI helpers ───────────────────────────────────────────────────────────────
@@ -390,10 +362,6 @@ export function getLinkStatusBadge(status: LinkStatus): {
       return { icon: "✕", label: "Unavailable", color: "#ef4444", bgColor: "#ef444415" };
     case "BLOCKED":
       return { icon: "🔒", label: "Blocked/Paywalled", color: "#a855f7", bgColor: "#a855f715" };
-    case "RESTRICTED_GOV":
-      return { icon: "🔐", label: "Restricted (DoD)", color: "#3b82f6", bgColor: "#3b82f615" };
-    case "INTERNAL":
-      return { icon: "🏛", label: "Internal System", color: "#6366f1", bgColor: "#6366f115" };
     case "UNCHECKED":
       return { icon: "⏳", label: "Checking...", color: "#64748b", bgColor: "#64748b15" };
   }

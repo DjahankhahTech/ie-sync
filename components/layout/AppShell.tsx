@@ -9,6 +9,11 @@ import { COAEngine } from "@/components/coa/COAEngine";
 import { SIGMANMonitor } from "@/components/sigman/SIGMANMonitor";
 import { AnnexGenerator } from "@/components/annex/AnnexGenerator";
 import { SensorFusion } from "@/components/sensor-fusion/SensorFusion";
+import { ConcealRevealDashboard } from "@/components/conceal-reveal/ConcealRevealDashboard";
+import { SignatureMgmtDashboard } from "@/components/signature-mgmt/SignatureMgmtDashboard";
+import { AdversaryPerceptionsDashboard } from "@/components/adversary-perceptions/AdversaryPerceptionsDashboard";
+import { GrayZoneDashboard } from "@/components/gray-zone/GrayZoneDashboard";
+import { ABMDDashboard } from "@/components/abmd/ABMDDashboard";
 
 const moduleMap: Record<string, React.ComponentType> = {
   cop: IEOverlay,
@@ -17,6 +22,11 @@ const moduleMap: Record<string, React.ComponentType> = {
   coa: COAEngine,
   sigman: SIGMANMonitor,
   annex: AnnexGenerator,
+  "conceal-reveal": ConcealRevealDashboard,
+  "signature-mgmt": SignatureMgmtDashboard,
+  "adversary-perceptions": AdversaryPerceptionsDashboard,
+  "gray-zone": GrayZoneDashboard,
+  abmd: ABMDDashboard,
 };
 
 export function AppShell() {

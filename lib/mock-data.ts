@@ -4,6 +4,55 @@ export type ThreatLevel = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 export type SensorType = "SIGINT" | "OSINT" | "HUMINT" | "CYBER" | "ISR" | "SOCMINT";
 export type IOCapability = "MISO" | "CYBER" | "EW" | "DECEPTION" | "OPSEC" | "MILDEC" | "PA";
 
+// ── COA Workflow & Annex Generation Types ────────────────────────────────
+
+export type COAStatus = "DRAFT" | "ANALYST_SELECTABLE" | "COMMANDER_ENDORSED" | "APPROVED";
+
+export interface COATask {
+  id: string;
+  capability: IOCapability;
+  description: string;
+  owner: string;
+  authority: string;
+  nlt: string;
+  moeSupported: string[];
+  phase: string;
+}
+
+export interface InformationEffect {
+  id: string;
+  effectType: "CREATE" | "PRESERVE" | "DENY" | "DEGRADE" | "DESTROY";
+  target: string;
+  description: string;
+  moeLinked: string[];
+}
+
+export interface AuthorityRequirement {
+  authority: string;
+  capability: IOCapability;
+  status: "OBTAINED" | "PENDING" | "NOT_REQUESTED";
+  requiredBy: string;
+  legalReview: boolean;
+}
+
+export type HumanReviewStatus = "PENDING_REVIEW" | "REVIEWED" | "APPROVED" | "REJECTED";
+
+export interface AnnexGeneration {
+  annexId: string;
+  docType: "annex-i" | "itco";
+  selectedCoaId: string;
+  selectedCoaVersion: number;
+  selectedCoaStatus: COAStatus;
+  generationTimestamp: string;
+  generatedBy: string;
+  classification: string;
+  outputHash: string;
+  humanReviewStatus: HumanReviewStatus;
+  gcc: string;
+  operationName: string;
+  planningToolId: string;
+}
+
 export interface SensorFeed {
   id: string;
   type: SensorType;
@@ -31,6 +80,17 @@ export interface COAOption {
   risk: ThreatLevel;
   resourceRequirement: string;
   moePredicted: number;
+  // COA workflow & Annex generation fields
+  status: COAStatus;
+  version: number;
+  createdBy: string;
+  approvedBy: string | null;
+  approvedTimestamp: string | null;
+  authorityRequirements: AuthorityRequirement[];
+  informationEffects: InformationEffect[];
+  tasks: COATask[];
+  posture: "ESCALATORY" | "DEFENSIVE" | "BALANCED";
+  linesOfEffort: string[];
 }
 
 export interface MOEMetric {
@@ -113,6 +173,209 @@ export interface RunningEstimate {
   recommendations: string[];
   cdruObjective: string;
   priority: "IE1" | "IE2" | "IE3";
+}
+
+// ── Module 1: Conceal / Reveal ──────────────────────────────────────────────
+
+export interface ConcealRevealIndicator {
+  id: string;
+  name: string;
+  /** 0-100 normalised score */
+  value: number;
+  /** Weight in composite calculation (all weights sum to 1.0) */
+  weight: number;
+  trend: "UP" | "DOWN" | "STABLE";
+  /** Last updated ISO timestamp */
+  updatedAt: string;
+  /** Source system or collection method */
+  source: string;
+}
+
+export interface ConcealRevealIndex {
+  /** Composite score 0-100 */
+  composite: number;
+  status: "GREEN" | "AMBER" | "RED";
+  posture: "CONCEAL" | "REVEAL" | "MIXED";
+  indicators: ConcealRevealIndicator[];
+  computedAt: string;
+}
+
+// ── Module 2: Signature Management ──────────────────────────────────────────
+
+export interface EMCONReading {
+  id: string;
+  emitter: string;
+  status: "SILENT" | "LOW" | "NORMAL" | "ELEVATED" | "VIOLATION";
+  reading_dbm: number;
+  threshold_dbm: number;
+  location: string;
+  timestamp: string;
+}
+
+export interface OPSECViolation {
+  id: string;
+  category: "SOCIAL_MEDIA" | "COMMS" | "PHYSICAL" | "DIGITAL" | "ADMINISTRATIVE";
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  description: string;
+  unit: string;
+  timestamp: string;
+  remediation: string;
+  resolved: boolean;
+}
+
+export interface SATVULWindow {
+  id: string;
+  satellite: string;
+  passStart: string;
+  passEnd: string;
+  elevationDeg: number;
+  sensorType: "OPTICAL" | "SAR" | "ELINT";
+  riskLevel: "HIGH" | "MEDIUM" | "LOW";
+  mitigationStatus: "MITIGATED" | "PENDING" | "UNMITIGATED";
+}
+
+export interface SignatureRiskComposite {
+  /** 0-100 composite risk score */
+  composite: number;
+  status: "GREEN" | "AMBER" | "RED";
+  emconScore: number;
+  opsecScore: number;
+  satvulScore: number;
+  emconReadings: EMCONReading[];
+  opsecViolations: OPSECViolation[];
+  satvulWindows: SATVULWindow[];
+  computedAt: string;
+}
+
+// ── Module 3: Adversary Perceptions ─────────────────────────────────────────
+
+export type SentimentCategory = "HOSTILE" | "PROVOCATIVE" | "DEFENSIVE" | "NEUTRAL" | "CONCILIATORY";
+
+export interface AdversaryMediaItem {
+  id: string;
+  source: string;
+  sourceType: "STATE_MEDIA" | "PROXY_OUTLET" | "SOCIAL_AMPLIFIER";
+  title: string;
+  summary: string;
+  url: string;
+  publishedAt: string;
+  language: string;
+  sentiment: number; // -1.0 to +1.0
+  sentimentCategory: SentimentCategory;
+  matchedKeywords: string[];
+  reach: number;
+}
+
+export interface PerceptionShiftEvent {
+  id: string;
+  timestamp: string;
+  triggerEvent: string;
+  sentimentBefore: number;
+  sentimentAfter: number;
+  magnitude: number;
+  sources: string[];
+}
+
+export interface AdversaryPerceptionState {
+  /** Overall adversary sentiment score -1.0 to +1.0 */
+  overallSentiment: number;
+  sentimentCategory: SentimentCategory;
+  escalationIndex: number; // 0-100
+  mediaItems: AdversaryMediaItem[];
+  shiftEvents: PerceptionShiftEvent[];
+  mediaVolume24h: number;
+  computedAt: string;
+}
+
+// ── Module 4: Gray Zone Activity ────────────────────────────────────────────
+
+export type GrayZoneCategory =
+  | "UNDERSEA_CABLE"
+  | "AIS_ANOMALY"
+  | "FISHING_MILITIA"
+  | "EEZ_VIOLATION"
+  | "ADIZ_INCURSION"
+  | "UAS_INCIDENT";
+
+export interface GrayZoneIncident {
+  id: string;
+  category: GrayZoneCategory;
+  title: string;
+  description: string;
+  location: [number, number]; // [lat, lng]
+  timestamp: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  attributionConfidence: number; // 0-100
+  suspectedActor: string;
+  status: "ACTIVE" | "RESOLVED" | "MONITORING";
+  correlatedNarrativeId?: string;
+}
+
+export interface GrayZoneOverlay {
+  eezBoundaries: Array<{ name: string; coordinates: [number, number][] }>;
+  adizBoundaries: Array<{ name: string; coordinates: [number, number][] }>;
+  underseaCables: Array<{
+    name: string;
+    path: [number, number][];
+    status: "NORMAL" | "DISRUPTED" | "UNKNOWN";
+  }>;
+}
+
+export interface GrayZoneState {
+  activityIndex: number; // 0-100
+  status: "GREEN" | "AMBER" | "RED";
+  incidents: GrayZoneIncident[];
+  overlay: GrayZoneOverlay;
+  correlationScore: number; // -1 to 1 Pearson with narrative shifts
+  computedAt: string;
+}
+
+// ── Module 5: Air & Ballistic Missile Defense ───────────────────────────────
+
+export type MissileType =
+  | "BALLISTIC_SHORT"
+  | "BALLISTIC_MEDIUM"
+  | "BALLISTIC_INTERMEDIATE"
+  | "ICBM"
+  | "CRUISE"
+  | "HYPERSONIC"
+  | "UAV_DRONE";
+
+export interface MissileEvent {
+  id: string;
+  missileType: MissileType;
+  /** Claimed launch location [lat, lng] */
+  launchLocation: [number, number];
+  /** Target area (if reported) [lat, lng] */
+  targetLocation?: [number, number];
+  timestamp: string;
+  source: string;
+  sourceReliability: number; // 0-100
+  /** Cross-source corroboration count */
+  crossSourceCount: number;
+  /** OSINT confidence score 0-100 (computed server-side) */
+  confidenceScore: number;
+  interceptClaimed: boolean;
+  interceptSource?: string;
+  /** Dedup cluster hash — events with same hash are treated as duplicates */
+  dedupHash: string;
+  status: "CONFIRMED" | "PROBABLE" | "UNCONFIRMED" | "RETRACTED";
+}
+
+export interface ABMDMetrics {
+  launchFrequency7d: number;
+  interceptRate: number; // 0-1 ratio
+  escalationIndex: number; // 0-100
+  avgConfidence: number; // 0-100
+}
+
+export interface ABMDState {
+  metrics: ABMDMetrics;
+  events: MissileEvent[];
+  status: "GREEN" | "AMBER" | "RED";
+  /** 7-day timeline bins for chart */
+  timeline: Array<{ date: string; launches: number; intercepts: number }>;
+  computedAt: string;
 }
 
 // --- DATA ---
@@ -239,6 +502,34 @@ export const coaOptions: COAOption[] = [
     risk: "LOW",
     resourceRequirement: "COMMANDO SOLO (1x EC-130J), 3x MISO teams, PA coordination",
     moePredicted: 72,
+    status: "ANALYST_SELECTABLE",
+    version: 1,
+    createdBy: "IO-PLANNER-01",
+    approvedBy: null,
+    approvedTimestamp: null,
+    posture: "BALANCED",
+    linesOfEffort: [
+      "LOE 1: Counter Adversary Narrative (PA/MISO)",
+      "LOE 2: Restore Population Confidence (MISO)",
+      "LOE 3: Degrade Bot Infrastructure (CYBER)",
+    ],
+    authorityRequirements: [
+      { authority: "PSYOP Approval Authority (USSOCOM)", capability: "MISO", status: "OBTAINED", requiredBy: "H-2", legalReview: false },
+      { authority: "III MEF PAO Approval", capability: "PA", status: "OBTAINED", requiredBy: "H-1", legalReview: false },
+      { authority: "CYBERCOM DCO (Title 10)", capability: "CYBER", status: "PENDING", requiredBy: "H-8", legalReview: true },
+    ],
+    informationEffects: [
+      { id: "IE-A1", effectType: "DENY", target: "Adversary deepfake narrative", description: "Deny adversary ability to sustain deepfake narrative reach", moeLinked: ["MOE-1"] },
+      { id: "IE-A2", effectType: "CREATE", target: "Population confidence", description: "Create conditions for restored population confidence via PA/MISO", moeLinked: ["MOE-2"] },
+      { id: "IE-A3", effectType: "DEGRADE", target: "Bot infrastructure", description: "Degrade adversary bot C2 via CYBERCOM platform takedown", moeLinked: ["MOE-3"] },
+    ],
+    tasks: [
+      { id: "T-A1", capability: "PA", description: "Issue multilingual press release rebutting deepfake narrative (EN/JA/ZH)", owner: "Theater PAO / IO PA Section", authority: "III MEF PAO approval", nlt: "H+0", moeSupported: ["MOE-1", "MOE-2"], phase: "SHAPE" },
+      { id: "T-A2", capability: "MISO", description: "Broadcast counter-narrative via COMMANDO SOLO on local FM/AM band", owner: "IO-designated MISO elements / 1st MIG", authority: "PSYOP Approval Authority", nlt: "H+2", moeSupported: ["MOE-1"], phase: "EXECUTE" },
+      { id: "T-A3", capability: "MISO", description: "Coordinate social media counter-narrative push via official accounts", owner: "IO-designated MISO elements / 1st MIG", authority: "PSYOP Approval Authority", nlt: "H+4", moeSupported: ["MOE-1", "MOE-2"], phase: "EXECUTE" },
+      { id: "T-A4", capability: "CYBER", description: "Submit CYBERCOM takedown request for adversary bot infrastructure", owner: "CYBERCOM-coordinated element", authority: "Title 10/50 legal review", nlt: "H+8", moeSupported: ["MOE-3"], phase: "EXECUTE" },
+      { id: "T-A5", capability: "MISO", description: "Follow-on trilingual leaflet drop via airdrop", owner: "IO-designated MISO elements / 1st MIG", authority: "PSYOP Approval Authority", nlt: "H+24", moeSupported: ["MOE-1", "MOE-2"], phase: "DOMINATE" },
+    ],
   },
   {
     id: "COA-B",
@@ -259,6 +550,34 @@ export const coaOptions: COAOption[] = [
     risk: "MEDIUM",
     resourceRequirement: "EC-130H Compass Call, CYBERCOM DCO authority, MILDEC planning cell",
     moePredicted: 58,
+    status: "COMMANDER_ENDORSED",
+    version: 1,
+    createdBy: "IO-PLANNER-01",
+    approvedBy: "CDR-III-MEF-G7",
+    approvedTimestamp: null,
+    posture: "ESCALATORY",
+    linesOfEffort: [
+      "LOE 1: Disrupt Adversary IO Infrastructure (CYBER/EW)",
+      "LOE 2: Degrade Adversary SIGINT Collection (EW)",
+      "LOE 3: Deceive Adversary Targeting Cycle (DECEPTION)",
+    ],
+    authorityRequirements: [
+      { authority: "CYBERCOM DCO (Title 10)", capability: "CYBER", status: "PENDING", requiredBy: "H-6", legalReview: true },
+      { authority: "INDOPACOM EW Deconfliction (JFC-IMC)", capability: "EW", status: "OBTAINED", requiredBy: "H-4", legalReview: false },
+      { authority: "JFC Deception Coordination", capability: "DECEPTION", status: "PENDING", requiredBy: "H-6", legalReview: false },
+    ],
+    informationEffects: [
+      { id: "IE-B1", effectType: "DEGRADE", target: "Adversary bot C2", description: "Degrade adversary bot command-and-control infrastructure via coordinated DCO", moeLinked: ["MOE-3"] },
+      { id: "IE-B2", effectType: "DENY", target: "Adversary SIGINT", description: "Deny adversary SIGINT collection on friendly tactical communications", moeLinked: ["MOE-5"] },
+      { id: "IE-B3", effectType: "DESTROY", target: "Adversary IO targeting cycle", description: "Destroy adversary IO targeting cycle through false SIGINT injection", moeLinked: ["MOE-3"] },
+    ],
+    tasks: [
+      { id: "T-B1", capability: "EW", description: "Jam adversary IO cell tactical comms (78-82 MHz band)", owner: "Theater EW platform", authority: "EMR via JFC-IMC", nlt: "H+0", moeSupported: ["MOE-5"], phase: "SHAPE" },
+      { id: "T-B2", capability: "CYBER", description: "Degrade bot C2 infrastructure via coordinated DCO", owner: "CYBERCOM-coordinated element", authority: "Title 10/50 legal review", nlt: "H+2", moeSupported: ["MOE-3"], phase: "EXECUTE" },
+      { id: "T-B3", capability: "DECEPTION", description: "Feed false SIGINT to adversary collection platforms", owner: "Deception planning cell", authority: "JFC coordination", nlt: "H+6", moeSupported: ["MOE-3", "MOE-5"], phase: "EXECUTE" },
+      { id: "T-B4", capability: "DECEPTION", description: "Insert counter-narrative into adversary IO channels", owner: "Deception planning cell", authority: "JFC coordination", nlt: "H+12", moeSupported: ["MOE-1"], phase: "DOMINATE" },
+      { id: "T-B5", capability: "OPSEC", description: "Assess effectiveness and adapt based on MOE feedback", owner: "Theater OPSEC Cell", authority: "Unit OPSEC Officer", nlt: "H+24", moeSupported: ["MOE-1", "MOE-3"], phase: "DOMINATE" },
+    ],
   },
   {
     id: "COA-C",
@@ -281,6 +600,42 @@ export const coaOptions: COAOption[] = [
     risk: "HIGH",
     resourceRequirement: "Full MIG activation, CYBERCOM coordination, INDOPACOM approval, EC-130H/J",
     moePredicted: 86,
+    status: "APPROVED",
+    version: 1,
+    createdBy: "IO-PLANNER-01",
+    approvedBy: "CDR-III-MEF-G7",
+    approvedTimestamp: "2026-02-28T14:00:00Z",
+    posture: "ESCALATORY",
+    linesOfEffort: [
+      "LOE 1: Counter Adversary Narrative (MISO/PA)",
+      "LOE 2: Degrade Adversary IO Infrastructure (CYBER/EW)",
+      "LOE 3: Protect Friendly Force Information (OPSEC)",
+      "LOE 4: Shape Regional Information Environment (DECEPTION/MISO)",
+    ],
+    authorityRequirements: [
+      { authority: "CYBERCOM DCO (Title 10)", capability: "CYBER", status: "PENDING", requiredBy: "H-6", legalReview: true },
+      { authority: "INDOPACOM EW Deconfliction (JFC-IMC)", capability: "EW", status: "OBTAINED", requiredBy: "H-4", legalReview: false },
+      { authority: "PSYOP Approval Authority (USSOCOM)", capability: "MISO", status: "OBTAINED", requiredBy: "H-2", legalReview: false },
+      { authority: "III MEF PAO Approval", capability: "PA", status: "OBTAINED", requiredBy: "H-1", legalReview: false },
+      { authority: "Unit OPSEC Officer", capability: "OPSEC", status: "OBTAINED", requiredBy: "H-0", legalReview: false },
+      { authority: "JFC Deception Coordination", capability: "DECEPTION", status: "PENDING", requiredBy: "H-6", legalReview: false },
+    ],
+    informationEffects: [
+      { id: "IE-C1", effectType: "DENY", target: "Adversary narrative reach", description: "Deny adversary IO apparatus the ability to achieve narrative superiority", moeLinked: ["MOE-1"] },
+      { id: "IE-C2", effectType: "DEGRADE", target: "APT41 C2 infrastructure", description: "Degrade APT41 persistent access to MIG C2 network", moeLinked: ["MOE-3"] },
+      { id: "IE-C3", effectType: "CREATE", target: "Positive population sentiment", description: "Create conditions for favorable population sentiment through multilingual counter-narrative", moeLinked: ["MOE-2"] },
+      { id: "IE-C4", effectType: "PRESERVE", target: "Friendly force OPSEC", description: "Preserve operational security of friendly force operations", moeLinked: ["MOE-6"] },
+      { id: "IE-C5", effectType: "DESTROY", target: "Adversary targeting cycle", description: "Destroy adversary narrative targeting cycle through deception operations", moeLinked: ["MOE-3"] },
+    ],
+    tasks: [
+      { id: "T-C1", capability: "OPSEC", description: "Execute OPSEC lockdown — restrict all friendly digital signatures", owner: "Theater OPSEC Cell", authority: "Unit OPSEC Officer", nlt: "H+0", moeSupported: ["MOE-6"], phase: "SHAPE" },
+      { id: "T-C2", capability: "EW", description: "Targeted suppression of adversary SIGINT platform", owner: "Theater EW platform", authority: "EMR via JFC-IMC", nlt: "H+1", moeSupported: ["MOE-5"], phase: "SHAPE" },
+      { id: "T-C3", capability: "CYBER", description: "DCO action — neutralize APT41 persistence in MIG C2", owner: "CYBERCOM-coordinated element", authority: "Title 10/50 legal review", nlt: "H+2", moeSupported: ["MOE-3"], phase: "EXECUTE" },
+      { id: "T-C4", capability: "PA", description: "Multilingual press conference addressing deepfake video", owner: "Theater PAO / IO PA Section", authority: "III MEF PAO approval", nlt: "H+3", moeSupported: ["MOE-2", "MOE-1"], phase: "EXECUTE" },
+      { id: "T-C5", capability: "MISO", description: "Broadcast via COMMANDO SOLO + digital platform counter-narrative", owner: "IO-designated MISO elements / 1st MIG", authority: "PSYOP Approval Authority", nlt: "H+6", moeSupported: ["MOE-1", "MOE-4"], phase: "EXECUTE" },
+      { id: "T-C6", capability: "DECEPTION", description: "Deception feed — degrade adversary narrative targeting cycle", owner: "Deception planning cell", authority: "JFC coordination", nlt: "H+12", moeSupported: ["MOE-3"], phase: "DOMINATE" },
+      { id: "T-C7", capability: "MISO", description: "Full MOE/MOP assessment and iterate planning cycle", owner: "IO-designated MISO elements / 1st MIG", authority: "PSYOP Approval Authority", nlt: "H+24", moeSupported: ["MOE-1", "MOE-2", "MOE-3"], phase: "DOMINATE" },
+    ],
   },
 ];
 
@@ -451,8 +806,8 @@ export const threatEntities: ThreatEntity[] = [
     confidence: 71,
     lastSeen: "2025-03-15T07:55Z",
     capabilities: ["MISO", "SOCMINT"],
-    sourceUrl: "https://www.justice.gov/usao-edny/pr/34-officers-peoples-republic-china-national-police-charged-perpetrating-transnational",
-    sourceLabel: "DOJ EDNY MPS Indictment (2023)",
+    sourceUrl: "https://www.justice.gov/opa/pr/justice-department-charges-individuals-covert-influence-campaign-targeting-united-states",
+    sourceLabel: "DOJ Indictment (2023)",
   },
   {
     id: "TE-003",
@@ -465,8 +820,8 @@ export const threatEntities: ThreatEntity[] = [
     confidence: 85,
     lastSeen: "2025-03-15T09:28Z",
     capabilities: ["CYBER", "SIGINT", "EW"],
-    sourceUrl: "https://www.cisa.gov/news-events/alerts/2024/12/03/cisa-and-partners-release-joint-guidance-prc-affiliated-threat-actor-compromising-networks-global",
-    sourceLabel: "CISA Salt Typhoon Guidance (Dec 2024)",
+    sourceUrl: "https://www.cisa.gov/news-events/alerts/2024/12/03/cisa-and-partners-release-joint-guidance-enhancing-visibility-prc-linked-cyber-threats",
+    sourceLabel: "CISA Advisory Dec 2024",
   },
   {
     id: "TE-004",
@@ -479,8 +834,8 @@ export const threatEntities: ThreatEntity[] = [
     confidence: 85,
     lastSeen: "2025-03-15T09:03Z",
     capabilities: ["CYBER"],
-    sourceUrl: "https://www.justice.gov/archives/opa/pr/us-government-disrupts-botnet-peoples-republic-china-used-conceal-hacking-critical",
-    sourceLabel: "DOJ Volt Typhoon Botnet Disruption (Jan 2024)",
+    sourceUrl: "https://www.justice.gov/opa/pr/justice-department-conducts-court-authorized-operation-disrupt-botnet-used-peoples-republic",
+    sourceLabel: "DOJ / FBI Jan 2024",
   },
 ];
 
@@ -535,7 +890,7 @@ export const runningEstimate: RunningEstimate = {
   classification: "SECRET//NOFORN",
   dtg: "151042Z MAR 25",
   operationName: "OPERATION PACIFIC SENTINEL",
-  missionStatement: "III MIG conducts Information Environment Operations in support of III MEF to counter adversary influence operations, protect friendly force information, and maintain IE superiority in the INDOPACOM AOR NLT D+7.",
+  missionStatement: "1st MIG conducts Information Environment Operations in support of III MEF to counter adversary influence operations, protect friendly force information, and maintain IE superiority in the INDOPACOM AOR NLT D+7.",
   ieCondition: "HOSTILE",
   ieSituation: "The Information Environment within the AO is assessed HOSTILE. Adversary state-sponsored IO apparatus (IRON PANDA) has achieved temporary narrative superiority in the local population. Multiple simultaneous threat vectors active: deepfake video viral dissemination, coordinated bot amplification, EW collection, and APT41 network penetration. Adversary appears to be executing a pre-planned, synchronized multi-domain IO event timed to coincide with upcoming MEF exercise.",
   adversaryCapabilities: [

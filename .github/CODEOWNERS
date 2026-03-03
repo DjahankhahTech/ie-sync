@@ -1,0 +1,17 @@
+# IE-SYNC Code Owners — NIST CM-5 (Access Restrictions for Change)
+# These owners are required reviewers for all PRs to main.
+
+# Default owners for everything
+*       @DjahankhahTech
+
+# Security-critical files require explicit review
+middleware.ts                     @DjahankhahTech
+lib/auth.ts                       @DjahankhahTech
+lib/audit-log.ts                  @DjahankhahTech
+lib/validation.ts                 @DjahankhahTech
+lib/encryption.ts                 @DjahankhahTech
+lib/immutable-log.ts              @DjahankhahTech
+app/api/auth/**                   @DjahankhahTech
+.github/workflows/**              @DjahankhahTech
+next.config.ts                    @DjahankhahTech
+docs/**                           @DjahankhahTech

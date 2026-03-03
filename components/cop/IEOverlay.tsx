@@ -13,7 +13,6 @@ import {
   generateMetricTrend,
   generateMetricDrivers,
   type MetricTrendPoint,
-  type SourceClassification,
 } from "@/lib/metric-contracts";
 import { getLinkStatusBadge, type LinkStatus } from "@/lib/source-links";
 
@@ -244,11 +243,11 @@ export function IEOverlay() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-[#94a3b8]">{entity.type}</td>
-                  <td className="px-4 py-2.5 text-[#94a3b8] min-w-[180px]">
-                    <div className="whitespace-normal leading-snug">{entity.location}</div>
+                  <td className="px-4 py-2.5 text-[#94a3b8] max-w-[150px]">
+                    <div className="truncate" title={entity.location}>{entity.location}</div>
                   </td>
-                  <td className="px-4 py-2.5 text-[#e2e8f0] min-w-[220px]">
-                    <div className="whitespace-normal leading-snug">{entity.activity}</div>
+                  <td className="px-4 py-2.5 text-[#e2e8f0] max-w-[200px]">
+                    <div className="truncate" title={entity.activity}>{entity.activity}</div>
                   </td>
                   <td className="px-4 py-2.5">
                     <ThreatBadge level={entity.threat} />
@@ -396,24 +395,11 @@ function ConfidenceBadge({ level }: { level: "HIGH" | "MEDIUM" | "LOW" }) {
 
 // ── Source Link Badge (with health status) ──────────────────────────
 
-function SourceLinkBadge({
-  url,
-  label,
-  source_type,
-  internal_system_id,
-}: {
-  url?: string;
-  label: string;
-  source_type?: SourceClassification;
-  internal_system_id?: string;
-}) {
-  const isNonPublic = source_type === "internal_system" || source_type === "classified_system";
+function SourceLinkBadge({ url, label }: { url: string; label: string }) {
   const [linkStatus, setLinkStatus] = useState<LinkStatus>("UNCHECKED");
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
 
-  // Hook must run unconditionally (Rules of Hooks) — skip fetch for non-public sources
   useEffect(() => {
-    if (isNonPublic) return;
     if (!url || url === "#") {
       setLinkStatus("DEAD");
       return;
@@ -438,47 +424,12 @@ function SourceLinkBadge({
     };
     checkLink();
     return () => { cancelled = true; };
-  }, [url, isNonPublic]);
-
-  // ── Mode 2: Internal system — non-clickable badge with system ID ──
-  if (source_type === "internal_system") {
-    const badge = getLinkStatusBadge("INTERNAL");
-    return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-mono">
-        <span
-          className="px-1 py-0 rounded border"
-          style={{ color: badge.color, borderColor: `${badge.color}60`, background: badge.bgColor }}
-          title={`Internal system: ${internal_system_id ?? label}`}
-        >
-          {badge.icon} INTERNAL
-        </span>
-        <span className="text-[#6366f1] text-[8px]">{internal_system_id ?? label}</span>
-      </span>
-    );
-  }
-
-  // ── Mode 3: Classified system — non-clickable badge ──
-  if (source_type === "classified_system") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-mono">
-        <span
-          className="px-1 py-0 rounded border"
-          style={{ color: "#a855f7", borderColor: "#a855f760", background: "#a855f715" }}
-          title={`Classified system: ${internal_system_id ?? label}`}
-        >
-          🔒 CLASSIFIED
-        </span>
-        <span className="text-[#a855f7] text-[8px]">{internal_system_id ?? label}</span>
-      </span>
-    );
-  }
-
-  // ── Mode 1: Public OSINT / Reference DB — link check + clickable badge ──
+  }, [url]);
 
   const badge = getLinkStatusBadge(linkStatus);
 
-  if (linkStatus === "DEAD" || linkStatus === "BLOCKED" || linkStatus === "RESTRICTED_GOV") {
-    const archiveUrl = url ? `https://web.archive.org/web/*/${encodeURIComponent(url)}` : "#";
+  if (linkStatus === "DEAD" || linkStatus === "BLOCKED") {
+    const archiveUrl = `https://web.archive.org/web/*/${encodeURIComponent(url)}`;
     return (
       <span className="inline-flex items-center gap-1 text-[9px] font-mono">
         <span
@@ -488,28 +439,26 @@ function SourceLinkBadge({
         >
           {badge.icon} {badge.label}
         </span>
-        {url && linkStatus !== "RESTRICTED_GOV" && (
-          <a
-            href={archiveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#a855f7] hover:text-[#c084fc] underline"
-            title="View archived version (Internet Archive)"
-          >
-            Archive ↗
-          </a>
-        )}
+        <a
+          href={archiveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#a855f7] hover:text-[#c084fc] underline"
+          title="View archived version (Internet Archive)"
+        >
+          Archive ↗
+        </a>
       </span>
     );
   }
 
   return (
     <a
-      href={url ?? "#"}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-[9px] font-mono hover:opacity-80 transition-opacity"
-      title={`${badge.label}: ${url ?? ""}${checkedAt ? ` (checked ${checkedAt})` : ""}`}
+      title={`${badge.label}: ${url}${checkedAt ? ` (checked ${checkedAt})` : ""}`}
     >
       <span
         className="px-1 py-0 rounded border"
@@ -733,34 +682,14 @@ function MOETile({ moe }: { moe: ReturnType<typeof useIEStore.getState>["moeMetr
           </div>
           <div>
             <div className="text-[#475569]">INPUTS ({definition.inputs.length})</div>
-            {definition.inputs.map((inp, i) => {
-              const isInternal = inp.source_type === "internal_system";
-              const isClassified = inp.source_type === "classified_system";
-              return (
-                <div key={i} className="text-[#94a3b8] mt-0.5 pl-1 border-l border-[#1e3a5f]">
-                  {isInternal && (
-                    <span className="px-0.5 py-0 rounded text-[7px] font-bold border mr-1"
-                      style={{ color: "#6366f1", borderColor: "#6366f160", background: "#6366f115" }}>
-                      INTERNAL
-                    </span>
-                  )}
-                  {isClassified && (
-                    <span className="px-0.5 py-0 rounded text-[7px] font-bold border mr-1"
-                      style={{ color: "#a855f7", borderColor: "#a855f760", background: "#a855f715" }}>
-                      CLASSIFIED
-                    </span>
-                  )}
-                  <span className="text-[#e2e8f0]">{inp.name}</span> · {inp.source} · {inp.freshness}
-                  {(isInternal || isClassified) && inp.internal_system_id ? (
-                    <span className={`ml-1 text-[8px] ${isClassified ? "text-[#a855f7]" : "text-[#6366f1]"}`}>
-                      [{inp.internal_system_id}]
-                    </span>
-                  ) : inp.reference ? (
-                    <a href={inp.reference} target="_blank" rel="noopener noreferrer" className="text-[#0891b2] ml-1">↗</a>
-                  ) : null}
-                </div>
-              );
-            })}
+            {definition.inputs.map((inp, i) => (
+              <div key={i} className="text-[#94a3b8] mt-0.5 pl-1 border-l border-[#1e3a5f]">
+                <span className="text-[#e2e8f0]">{inp.name}</span> · {inp.source} · {inp.freshness}
+                {inp.reference && (
+                  <a href={inp.reference} target="_blank" rel="noopener noreferrer" className="text-[#0891b2] ml-1">↗</a>
+                )}
+              </div>
+            ))}
           </div>
           <div>
             <div className="text-[#475569]">FILTERS</div>
@@ -855,41 +784,17 @@ function MOETile({ moe }: { moe: ReturnType<typeof useIEStore.getState>["moeMetr
         {/* Evidence refs */}
         <div className="mb-2">
           <div className="text-[#475569] mb-0.5">EVIDENCE TRAIL ({run.evidence_refs.length})</div>
-          {run.evidence_refs.map((ref, i) => {
-            const isInternal = ref.source_type === "internal_system";
-            const isClassified = ref.source_type === "classified_system";
-            const isEstimated = ref.is_estimated_timestamp;
-            const timeStr = (() => { try { return new Date(ref.timestamp).toISOString().substring(11, 16) + "Z"; } catch { return ""; } })();
-            return (
-              <div key={i} className="flex items-center gap-1 mt-0.5 pl-1 border-l border-[#1e3a5f]">
-                {isInternal && (
-                  <span className="px-0.5 py-0 rounded text-[7px] font-bold border"
-                    style={{ color: "#6366f1", borderColor: "#6366f160", background: "#6366f115" }}>
-                    INTERNAL
-                  </span>
-                )}
-                {isClassified && (
-                  <span className="px-0.5 py-0 rounded text-[7px] font-bold border"
-                    style={{ color: "#a855f7", borderColor: "#a855f760", background: "#a855f715" }}>
-                    CLASSIFIED
-                  </span>
-                )}
-                <span className="text-[#94a3b8] truncate">{ref.label}</span>
-                {ref.url && !isInternal && !isClassified && (
-                  <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-[#0891b2] flex-shrink-0">↗</a>
-                )}
-                {isInternal && ref.internal_system_id && (
-                  <span className="text-[#6366f1] text-[7px] flex-shrink-0">[{ref.internal_system_id}]</span>
-                )}
-                {isClassified && ref.internal_system_id && (
-                  <span className="text-[#a855f7] text-[7px] flex-shrink-0">[{ref.internal_system_id}]</span>
-                )}
-                <span className="text-[#334155] ml-auto flex-shrink-0">
-                  {isEstimated ? "~" : ""}{timeStr}
-                </span>
-              </div>
-            );
-          })}
+          {run.evidence_refs.map((ref, i) => (
+            <div key={i} className="flex items-center gap-1 mt-0.5 pl-1 border-l border-[#1e3a5f]">
+              <span className="text-[#94a3b8]">{ref.label}</span>
+              {ref.url && (
+                <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-[#0891b2]">↗</a>
+              )}
+              <span className="text-[#334155] ml-auto">
+                {(() => { try { return new Date(ref.timestamp).toISOString().substring(11, 16) + "Z"; } catch { return ""; } })()}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* MetricRun metadata */}

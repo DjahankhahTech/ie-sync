@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# CodeQL SAST Analysis — NIST 800-171: SI-10, RA-5, SA-11
+#
+# Performs static application security testing on every push and PR.
+# Detects: injection flaws, XSS, path traversal, insecure crypto, etc.
+# ──────────────────────────────────────────────────────────────────────────────
+name: "CodeQL SAST"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly deep scan (NIST RA-5: Vulnerability Scanning)
+    - cron: "30 6 * * 1"
+
+jobs:
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Security-extended includes additional queries for DoD-relevant patterns
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

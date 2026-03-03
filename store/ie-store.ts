@@ -10,6 +10,12 @@ import {
   type ThreatEntity,
   type NarrativeThread,
   type RunningEstimate,
+  type ConcealRevealIndex,
+  type SignatureRiskComposite,
+  type AdversaryPerceptionState,
+  type GrayZoneState,
+  type ABMDState,
+  type AnnexGeneration,
 } from "@/lib/mock-data";
 import { type GCCId } from "@/lib/gcc-config";
 import { getGCCMockData } from "@/lib/gcc-mock-data";
@@ -82,6 +88,32 @@ interface IEState {
     analystNote: string;
   }>;
   escalateFeedItem: (feedItemId: string, title: string, source: string, link: string, tag: string, analystNote: string) => void;
+
+  // New module state
+  concealRevealIndex: ConcealRevealIndex | null;
+  signatureRisk: SignatureRiskComposite | null;
+  adversaryPerceptions: AdversaryPerceptionState | null;
+  grayZoneState: GrayZoneState | null;
+  abmdState: ABMDState | null;
+  setConcealRevealIndex: (data: ConcealRevealIndex | null) => void;
+  setSignatureRisk: (data: SignatureRiskComposite | null) => void;
+  setAdversaryPerceptions: (data: AdversaryPerceptionState | null) => void;
+  setGrayZoneState: (data: GrayZoneState | null) => void;
+  setABMDState: (data: ABMDState | null) => void;
+
+  // Annex generation
+  annexGenerating: boolean;
+  annexGenProgress: number;
+  lastGeneratedAnnex: {
+    annexId: string;
+    docType: string;
+    content: string;
+    metadata: AnnexGeneration;
+    warnings: string[];
+  } | null;
+  setAnnexGenerating: (generating: boolean, progress?: number) => void;
+  setLastGeneratedAnnex: (annex: IEState["lastGeneratedAnnex"]) => void;
+  clearAnnexState: () => void;
 
   // System status
   lastRefresh: string;
@@ -171,6 +203,10 @@ export const useIEStore = create<IEState>((set) => ({
       signatureItems: data.signatureItems,
       alerts: buildAlertsForGCC(gcc),
       selectedCOA: null,
+      // Reset annex state on GCC switch
+      annexGenerating: false,
+      annexGenProgress: 0,
+      lastGeneratedAnnex: null,
     });
   },
 
@@ -240,6 +276,27 @@ export const useIEStore = create<IEState>((set) => ({
         },
       ],
     })),
+
+  concealRevealIndex: null,
+  signatureRisk: null,
+  adversaryPerceptions: null,
+  grayZoneState: null,
+  abmdState: null,
+  setConcealRevealIndex: (data) => set({ concealRevealIndex: data }),
+  setSignatureRisk: (data) => set({ signatureRisk: data }),
+  setAdversaryPerceptions: (data) => set({ adversaryPerceptions: data }),
+  setGrayZoneState: (data) => set({ grayZoneState: data }),
+  setABMDState: (data) => set({ abmdState: data }),
+
+  annexGenerating: false,
+  annexGenProgress: 0,
+  lastGeneratedAnnex: null,
+  setAnnexGenerating: (generating, progress) =>
+    set({ annexGenerating: generating, annexGenProgress: progress ?? 0 }),
+  setLastGeneratedAnnex: (annex) =>
+    set({ lastGeneratedAnnex: annex, annexGenerating: false, annexGenProgress: 100 }),
+  clearAnnexState: () =>
+    set({ annexGenerating: false, annexGenProgress: 0, lastGeneratedAnnex: null }),
 
   lastRefresh: new Date().toISOString(),
   systemStatus: "ONLINE",

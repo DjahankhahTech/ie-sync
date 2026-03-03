@@ -1,0 +1,109 @@
+name: Security & Compliance CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  security-audit:
+    name: Security Audit & SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # NIST SR-4/SI-2: Fail pipeline on high/critical vulnerabilities
+      - name: npm audit (SCA — dependency vulnerabilities)
+        run: npm audit --audit-level=high
+
+      # NIST SR-5: SBOM generation (CycloneDX v1.6)
+      - name: Generate CycloneDX SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-reproducible
+
+      - name: Validate SBOM integrity
+        run: |
+          node -e "
+            const sbom = require('./sbom.json');
+            console.log('Format:', sbom.bomFormat, '| Version:', sbom.specVersion);
+            console.log('Components:', sbom.components?.length ?? 0);
+            if (!sbom.components || sbom.components.length === 0) process.exit(1);
+          "
+
+      - name: Upload SBOM artifact (1-year retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.json
+          retention-days: 365
+
+      # NIST SI-10: TypeScript type safety
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+        continue-on-error: true
+
+  sast-security:
+    name: SAST Security Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security-focused ESLint rules
+        run: |
+          npx eslint . \
+            --no-eslintrc \
+            --rule '{"no-eval": "error", "no-implied-eval": "error", "no-new-func": "error"}' \
+            --ext .ts,.tsx \
+            --ignore-pattern 'node_modules' \
+            --ignore-pattern '.next' || true
+
+  build-verify:
+    name: Production Build Verification
+    runs-on: ubuntu-latest
+    needs: [security-audit]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXTAUTH_SECRET: ci-build-secret-not-for-production
+          NEXTAUTH_URL: http://localhost:3000
