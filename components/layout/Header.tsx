@@ -58,7 +58,7 @@ export function Header() {
   };
 
   return (
-    <header className="bg-[#070d1a] border-b border-[#1e3a5f] px-4 py-3">
+    <header className="bg-[#070d1a] border-b border-[#1e3a5f] px-4 py-3 relative z-20">
       <div className="flex items-center justify-between gap-4">
         {/* Left: module title */}
         <div className="min-w-0">

@@ -44,7 +44,7 @@ export function AppShell() {
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden relative z-0">
             <ActiveComponent />
           </main>
         </div>
