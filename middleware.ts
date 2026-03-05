@@ -14,8 +14,29 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { audit } from "@/lib/audit-log";
 import { hasPermission, permissionForPath, type Role } from "@/lib/auth";
+
+// ── Edge-compatible audit logger ──────────────────────────────────────────
+// Middleware runs on the Edge Runtime (Vercel) where Node.js-only modules
+// like pino (fs, os, streams) are unavailable. We use a lightweight
+// console-based logger here; full pino audit logging remains in API routes
+// which run on the Node.js runtime.
+function audit(entry: {
+  event: string;
+  userId: string;
+  role: string;
+  ip: string;
+  userAgent: string;
+  resource: string;
+  action: string;
+  outcome: string;
+  details?: Record<string, unknown>;
+}): void {
+  const ts = new Date().toISOString();
+  console.log(
+    JSON.stringify({ audit: true, ts, ...entry }),
+  );
+}
 
 // ── Rate Limiting (AC-7, SC-5) ────────────────────────────────────────────
 const RATE_LIMIT_WINDOW_MS = 60_000;
