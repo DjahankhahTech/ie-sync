@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0e1a;
+  --foreground: #e2e8f0;
+  --primary: #1a3a5c;
+  --primary-light: #2563eb;
+  --accent: #00d4ff;
+  --accent-dim: #0891b2;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --success: #10b981;
+  --muted: #334155;
+  --muted-fg: #94a3b8;
+  --border: #1e3a5f;
+  --card: #0f1829;
+  --card-hover: #162035;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Screen-legible serif base (Georgia reads far better than Times at small
+     sizes); data/document blocks opt into mono via .font-mono */
+  font-family: 'Georgia', 'Times New Roman', 'Times', serif;
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* Keep tactical/data readouts monospaced where explicitly requested */
+.font-mono,
+pre,
+code {
+  font-family: 'Courier New', 'Monaco', ui-monospace, monospace;
+}
+
+/* ── Legibility floor ─────────────────────────────────────────────────────
+   The tactical UI uses many tiny arbitrary sizes (8–11px). Times New Roman's
+   thin serifs blur badly at those sizes on a dark background, so raise the
+   floor and relax the wide letter-spacing that makes small serif text hard to
+   parse. */
+.text-\[8px\]  { font-size: 11.5px !important; line-height: 1.45; }
+.text-\[9px\]  { font-size: 12px !important; line-height: 1.45; }
+.text-\[10px\] { font-size: 12.5px !important; line-height: 1.5; }
+.text-\[11px\] { font-size: 13px !important; line-height: 1.5; }
+.text-xs       { font-size: 13.5px !important; line-height: 1.55; }
+.text-sm       { font-size: 14.5px !important; line-height: 1.55; }
+/* Tighten the spread-out uppercase headers — wide tracking + serif is the
+   worst case for readability. */
+.tracking-widest { letter-spacing: 0.04em !important; }
+.tracking-wider  { letter-spacing: 0.02em !important; }
+/* Brighten the lowest-contrast muted greys a notch for body legibility. */
+.text-\[\#475569\] { color: #6b7a90 !important; }
+.text-\[\#334155\] { color: #586577 !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f1829; }
+::-webkit-scrollbar-thumb { background: #0891b2; border-radius: 3px; }
+
+.tactical-bg {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+@keyframes pulse-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-alert { animation: pulse-alert 1.5s ease-in-out infinite; }
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+.scan-line {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.3), transparent);
+  animation: scan-line 8s linear infinite;
+  pointer-events: none; z-index: 9999;
+}
+
+.glow-accent { box-shadow: 0 0 10px rgba(0, 212, 255, 0.3); }
+.glow-danger { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+.glow-success { box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.active { background: #10b981; box-shadow: 0 0 6px #10b981; animation: pulse-alert 2s ease-in-out infinite; }
+.status-dot.warning { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: pulse-alert 1s ease-in-out infinite; }
+.status-dot.danger { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse-alert 0.7s ease-in-out infinite; }
+
+.classification-banner { text-align: center; font-weight: 900; font-size: 0.75rem; letter-spacing: 0.2em; padding: 3px 0; }
+.classification-ts { background: #ffd700; color: #000; }
+.classification-s { background: #ff4444; color: #fff; }
+.classification-c { background: #4488ff; color: #fff; }
+.classification-u { background: #44cc44; color: #000; }
+
+.tactical-card {
+  background: #0f1829;
+  border: 1px solid #1e3a5f;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.tactical-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #0891b2, #00d4ff, #0891b2);
+}
+
+.map-grid {
+  background: #061020;
+  background-image:
+    linear-gradient(rgba(0,100,200,0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,100,200,0.15) 1px, transparent 1px),
+    linear-gradient(rgba(0,100,200,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,100,200,0.05) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+
+.threat-critical { color: #ff2222; }
+.threat-high { color: #ff6622; }
+.threat-medium { color: #ffaa22; }
+.threat-low { color: #22cc88; }
+.threat-info { color: #2288ff; }
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.typewriter { overflow: hidden; white-space: nowrap; animation: typewriter 2s steps(40) forwards; }
+
+.confidence-bar { height: 4px; border-radius: 2px; background: #334155; overflow: hidden; }
+.confidence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }

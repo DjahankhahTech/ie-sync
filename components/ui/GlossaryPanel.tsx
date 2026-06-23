@@ -1,0 +1,804 @@
+"use client";
+
+import { useState } from "react";
+
+// ── Types ────────────────────────────────────────────────────────────
+interface GlossaryEntry {
+  term: string;
+  definition: string;
+  category?: string;
+}
+
+interface GlossaryPanelProps {
+  /** Which module context to show — determines which terms are shown */
+  module:
+    | "cop"
+    | "sensor-fusion"
+    | "running-estimate"
+    | "coa"
+    | "sigman"
+    | "annex";
+  /** Optional override label for the panel header */
+  title?: string;
+}
+
+// ── Shared / Universal Terms ─────────────────────────────────────────
+const UNIVERSAL_TERMS: GlossaryEntry[] = [
+  {
+    term: "1st MIG",
+    definition:
+      "1st Marine Information Group — the Marine Corps' primary Information Operations unit supporting III MEF and other commands in the INDOPACOM region.",
+    category: "Organization",
+  },
+  {
+    term: "III MEF",
+    definition:
+      "III Marine Expeditionary Force — the US Marine Corps' primary forward-deployed force in the Pacific, headquartered in Okinawa, Japan.",
+    category: "Organization",
+  },
+  {
+    term: "AOR",
+    definition:
+      "Area of Responsibility — the geographic region assigned to a combatant commander for military operations and planning.",
+    category: "Military",
+  },
+  {
+    term: "GCC",
+    definition:
+      "Geographic Combatant Command — one of six US military commands (INDOPACOM, CENTCOM, EUCOM, AFRICOM, SOUTHCOM, NORTHCOM) each responsible for a region of the world.",
+    category: "Organization",
+  },
+  {
+    term: "INDOPACOM",
+    definition:
+      "US Indo-Pacific Command — combatant command responsible for the Pacific and Indian Ocean regions, headquartered at Camp H.M. Smith, Hawaii.",
+    category: "Organization",
+  },
+  {
+    term: "CENTCOM",
+    definition:
+      "US Central Command — combatant command responsible for the Middle East, North Africa, and Central/South Asia.",
+    category: "Organization",
+  },
+  {
+    term: "EUCOM",
+    definition:
+      "US European Command — combatant command responsible for Europe, Russia, and parts of the Middle East.",
+    category: "Organization",
+  },
+  {
+    term: "AFRICOM",
+    definition:
+      "US Africa Command — combatant command responsible for the African continent (except Egypt).",
+    category: "Organization",
+  },
+  {
+    term: "SOUTHCOM",
+    definition:
+      "US Southern Command — combatant command responsible for Central America, South America, and the Caribbean.",
+    category: "Organization",
+  },
+  {
+    term: "NORTHCOM",
+    definition:
+      "US Northern Command — combatant command responsible for the defense of North America (US, Canada, Mexico).",
+    category: "Organization",
+  },
+  {
+    term: "IO",
+    definition:
+      "Information Operations — the integrated employment of electronic warfare, computer network operations, psychological operations, military deception, and operations security to influence adversary decision-making while protecting friendly information.",
+    category: "IO Core",
+  },
+  {
+    term: "IE",
+    definition:
+      "Information Environment — the aggregate of individuals, organizations, and systems that collect, process, disseminate, or act on information. Consists of three dimensions: Physical, Informational, and Cognitive.",
+    category: "IO Core",
+  },
+  {
+    term: "IE Superiority",
+    definition:
+      "The operational condition in which friendly forces control the Information Environment within the AOR, enabling effective mission execution while denying the same to adversaries.",
+    category: "IO Core",
+  },
+  {
+    term: "APT",
+    definition:
+      "Advanced Persistent Threat — a sophisticated, state-sponsored or state-linked cyber threat actor that conducts long-term, covert intrusion campaigns against specific targets. Examples: APT41 (China), APT28 (Russia).",
+    category: "Cyber",
+  },
+  {
+    term: "OSINT",
+    definition:
+      "Open Source Intelligence — intelligence collected from publicly available sources: news media, internet, government reports, academic publications, social media.",
+    category: "Intelligence",
+  },
+  {
+    term: "SOCMINT",
+    definition:
+      "Social Media Intelligence — intelligence derived from monitoring social media platforms (Twitter/X, Facebook, Telegram, WeChat, etc.) to track narratives, sentiment, and adversary activity.",
+    category: "Intelligence",
+  },
+  {
+    term: "SIGINT",
+    definition:
+      "Signals Intelligence — intelligence collected from electronic signals, including communications (COMINT) and electronic emissions (ELINT). Primarily a NSA/CSS mission.",
+    category: "Intelligence",
+  },
+  {
+    term: "HUMINT",
+    definition:
+      "Human Intelligence — intelligence collected by human sources (agents, informants, liaison contacts). Complements technical collection methods.",
+    category: "Intelligence",
+  },
+  {
+    term: "ISR",
+    definition:
+      "Intelligence, Surveillance, and Reconnaissance — integrated operations and activities to synchronize and integrate the planning and operation of sensors, assets, and processing, exploitation, and dissemination systems.",
+    category: "Intelligence",
+  },
+  {
+    term: "DTG",
+    definition:
+      "Date-Time Group — a military timestamp format. Example: '151042Z MAR 25' = 15th day of March 2025, 10:42 Zulu (UTC) time.",
+    category: "Military",
+  },
+];
+
+// ── Module-specific Term Sets ────────────────────────────────────────
+const MODULE_TERMS: Record<string, GlossaryEntry[]> = {
+  cop: [
+    {
+      term: "COP",
+      definition:
+        "Common Operating Picture — a single display of relevant operational data shared by more than one command, enabling situational awareness and coordinated decision-making.",
+      category: "Military",
+    },
+    {
+      term: "Threat Entity",
+      definition:
+        "A documented adversary actor — state, non-state, or proxy — confirmed by government indictments, intelligence advisories, or official designations. Each entity in this system links to its verifiable source (DOJ, CISA, MITRE ATT&CK, etc.).",
+      category: "IO Core",
+    },
+    {
+      term: "MOE",
+      definition:
+        "Measure of Effectiveness — a criterion used to assess changes in system behavior, capability, or operational environment tied to measuring attainment of an end state, achievement of an objective, or creation of an effect.",
+      category: "IO Core",
+    },
+    {
+      term: "STATE (Threat Type)",
+      definition:
+        "A threat actor operating under the direct control of a national government — e.g., Chinese MSS cyber units, Russian GRU. Distinguished from proxies and non-state actors.",
+      category: "Threat",
+    },
+    {
+      term: "NON-STATE (Threat Type)",
+      definition:
+        "A threat actor operating independently of any government, such as terrorist organizations, criminal networks, or hacktivist groups.",
+      category: "Threat",
+    },
+    {
+      term: "PROXY (Threat Type)",
+      definition:
+        "An actor conducting operations on behalf of a state but with plausible deniability — e.g., Wagner Group operating for Russia, Lebanese Hezbollah acting for Iran.",
+      category: "Threat",
+    },
+    {
+      term: "Confidence %",
+      definition:
+        "The analytic confidence level in the accuracy of the intelligence assessment, expressed as a percentage. High (>75%): assessed with high confidence; Medium (50-75%): some uncertainty remains; Low (<50%): limited evidence.",
+      category: "Intelligence",
+    },
+    {
+      term: "IO-Relevant Feed",
+      definition:
+        "Live RSS news articles algorithmically scored for relevance to Information Operations — covering adversary IO activity, cyber threats, disinformation, and regional tensions. Each article links to its original verified source.",
+      category: "IO Core",
+    },
+    {
+      term: "IO Relevance Score",
+      definition:
+        "A 0–100 score assigned to each article indicating its relevance to ongoing IO activities. 60+: High (red) — direct IO relevance; 40–59: Medium (orange); below 40: Low (yellow).",
+      category: "IO Core",
+    },
+    {
+      term: "Narrative Threat Board",
+      definition:
+        "Real-time tracking of information narratives active in the operational environment — both adversarial (disinformation campaigns) and friendly (counter-narratives). Sentiment, reach, and velocity are displayed for each.",
+      category: "IO Core",
+    },
+    {
+      term: "MISO",
+      definition:
+        "Military Information Support Operations (formerly Psychological Operations / PSYOP) — planned operations to convey selected information to foreign target audiences to influence their emotions, motives, objective reasoning, and ultimately behavior.",
+      category: "IO Core",
+    },
+    {
+      term: "MITRE ATT&CK",
+      definition:
+        "A globally-accessible knowledge base of adversary tactics, techniques, and procedures (TTPs) based on real-world observations. Published by MITRE Corporation. URL: attack.mitre.org",
+      category: "Cyber",
+    },
+    {
+      term: "CISA",
+      definition:
+        "Cybersecurity and Infrastructure Security Agency — US federal agency that coordinates national cybersecurity, publishes threat advisories, and tracks state-sponsored cyber actors.",
+      category: "Organization",
+    },
+    {
+      term: "DOJ Indictment",
+      definition:
+        "A formal charge issued by the US Department of Justice against individuals or groups for criminal activity. DOJ indictments of foreign cyber actors provide legally-grounded public attribution of threat entities.",
+      category: "Legal",
+    },
+    {
+      term: "OFAC Designation",
+      definition:
+        "Office of Foreign Assets Control designation — a US Treasury sanction identifying individuals, organizations, or countries subject to economic sanctions. OFAC designations confirm threat actor status with legal authority.",
+      category: "Legal",
+    },
+    {
+      term: "Coordinated Inauthentic Behavior (CIB)",
+      definition:
+        "The use of fake or compromised social media accounts, bots, or coordinated networks to artificially amplify content, manipulate public discourse, or spread disinformation — without disclosing the true origin.",
+      category: "IO Core",
+    },
+    {
+      term: "Deepfake",
+      definition:
+        "AI-generated synthetic media — video, audio, or images — designed to impersonate real people or fabricate events. A key IO threat vector used by state actors to spread disinformation.",
+      category: "Threat",
+    },
+    {
+      term: "EW",
+      definition:
+        "Electronic Warfare — military action involving the use of electromagnetic energy to control the electromagnetic spectrum or attack an adversary. Includes jamming, deception, and electronic protection.",
+      category: "IO Core",
+    },
+  ],
+
+  "sensor-fusion": [
+    {
+      term: "Sensor Fusion",
+      definition:
+        "The process of integrating data from multiple intelligence collection sources (SIGINT, OSINT, HUMINT, CYBER, ISR, SOCMINT) into a coherent, unified operational picture for decision-making.",
+      category: "Intelligence",
+    },
+    {
+      term: "ELINT",
+      definition:
+        "Electronic Intelligence — signals intelligence collected from non-communications electromagnetic emissions such as radar, weapons systems, and electronic sensors.",
+      category: "Intelligence",
+    },
+    {
+      term: "Anomaly",
+      definition:
+        "A data point or pattern that deviates significantly from established baselines, potentially indicating adversary activity, data poisoning, or system compromise. Flagged for priority analyst review.",
+      category: "Analysis",
+    },
+    {
+      term: "Processed / Unprocessed",
+      definition:
+        "Processed: intelligence that has been analyzed, validated, and integrated into assessments. Unprocessed: raw collected data awaiting analyst review — treat with higher uncertainty.",
+      category: "Intelligence",
+    },
+    {
+      term: "Bot / Bot Network",
+      definition:
+        "Automated social media accounts or compromised computers controlled by an adversary to amplify narratives, conduct cyberattacks, or gather intelligence at scale.",
+      category: "Threat",
+    },
+    {
+      term: "DCO",
+      definition:
+        "Defensive Cyber Operations — actions taken to protect, monitor, analyze, detect, and respond to unauthorized activity within DoD information networks. Authorized under Title 10 USC.",
+      category: "Cyber",
+    },
+    {
+      term: "C2",
+      definition:
+        "Command and Control — the exercise of authority and direction by a properly designated commander over assigned forces. In cyber context: adversary infrastructure used to control malware and compromised systems.",
+      category: "Military",
+    },
+    {
+      term: "TTP",
+      definition:
+        "Tactics, Techniques, and Procedures — the specific methods and patterns used by adversaries to accomplish their objectives. Documented in MITRE ATT&CK framework.",
+      category: "Cyber",
+    },
+    {
+      term: "Threat Indicator",
+      definition:
+        "Observable evidence suggesting adversary activity — such as specific IP addresses, malware signatures, network patterns, or behavioral markers associated with known threat groups.",
+      category: "Cyber",
+    },
+    {
+      term: "Velocity (Narrative)",
+      definition:
+        "The speed at which a narrative or piece of content is being shared — measured in posts per hour. High velocity indicates viral spread and potential coordinated amplification.",
+      category: "IO Core",
+    },
+    {
+      term: "Reach",
+      definition:
+        "The estimated total audience exposed to a narrative or message, expressed as a number of impressions or accounts. A key MOE for information operations effectiveness.",
+      category: "IO Core",
+    },
+    {
+      term: "COMMANDO SOLO",
+      definition:
+        "EC-130J Commando Solo aircraft — the US Air Force's airborne broadcast station capable of transmitting AM, FM, HF, TV, and military communications bands for MISO and EW missions.",
+      category: "Capability",
+    },
+  ],
+
+  "running-estimate": [
+    {
+      term: "Running Estimate",
+      definition:
+        "A continuously updated assessment maintained by each staff section that summarizes the current situation, identifies critical issues, and provides recommendations to support commander decision-making. This is the Information Operations Running Estimate.",
+      category: "Military",
+    },
+    {
+      term: "IE Condition",
+      definition:
+        "The commander's assessment of the overall state of the Information Environment: PERMISSIVE (friendly forces dominant), UNCERTAIN (contested), or HOSTILE (adversary dominant).",
+      category: "IO Core",
+    },
+    {
+      term: "CDRU Objective",
+      definition:
+        "Commander's Desired Result/Outcome — the specific end state the commander wants to achieve in the Information Environment through IO activities.",
+      category: "Military",
+    },
+    {
+      term: "MOE",
+      definition:
+        "Measure of Effectiveness — criterion used to assess whether an IO activity is achieving its intended objective. Answers 'Are we doing the right things?' GREEN = on track, AMBER = at risk, RED = failing.",
+      category: "IO Core",
+    },
+    {
+      term: "MOP",
+      definition:
+        "Measure of Performance — criterion used to assess whether friendly forces are executing IO tasks correctly and completely. Answers 'Are we doing things right?' Tracks output rather than outcome.",
+      category: "IO Core",
+    },
+    {
+      term: "Assumptions",
+      definition:
+        "Facts assumed to be true for planning purposes due to insufficient information. Assumptions drive planning but must be validated — if an assumption proves false, plans must be reassessed.",
+      category: "Military",
+    },
+    {
+      term: "Limitations",
+      definition:
+        "Restrictions or constraints on friendly force IO activities — including legal authorities, resource availability, ROE, and policy requirements (e.g., 'All AI products require human review').",
+      category: "Military",
+    },
+    {
+      term: "Risk",
+      definition:
+        "A potential future condition or event that may negatively affect mission accomplishment. Each risk is paired with a mitigation measure.",
+      category: "Military",
+    },
+    {
+      term: "Priority: IE1/IE2/IE3",
+      definition:
+        "Commander's IO priority designation: IE1 = highest priority (full effort required), IE2 = significant priority, IE3 = supporting effort.",
+      category: "IO Core",
+    },
+    {
+      term: "SECRET//NOFORN",
+      definition:
+        "Classification marking: SECRET = requires safeguarding; NOFORN = Not Releasable to Foreign Nationals. Standard classification for IO running estimates in contested environments.",
+      category: "Classification",
+    },
+    {
+      term: "Adversary Capabilities",
+      definition:
+        "Documented IO capabilities of adversary forces including cyber intrusion, disinformation production, EW assets, and social media manipulation. Derived from intelligence assessments.",
+      category: "IO Core",
+    },
+    {
+      term: "Friendly Capabilities",
+      definition:
+        "Available IO tools and assets including MISO teams, EW aircraft, cyber units, PA office, and analytical platforms that friendly forces can employ.",
+      category: "IO Core",
+    },
+  ],
+
+  coa: [
+    {
+      term: "COA",
+      definition:
+        "Course of Action — a plan that meets the commander's intent and the mission's requirements. In IO planning, COAs represent different combinations of capabilities and sequencing to achieve IE effects.",
+      category: "Military",
+    },
+    {
+      term: "Success Probability",
+      definition:
+        "An analytic estimate (0–100%) of the likelihood that a COA will achieve its intended IO effects, based on available intelligence, adversary capabilities, and historical data.",
+      category: "Analysis",
+    },
+    {
+      term: "Time to Effect",
+      definition:
+        "The estimated time required for a COA to produce observable, measurable results in the Information Environment after execution begins.",
+      category: "IO Core",
+    },
+    {
+      term: "Risk Level",
+      definition:
+        "The potential negative consequences of a COA: LOW = minimal risk of escalation or failure; MEDIUM = some risk requiring mitigation; HIGH = significant risk requiring commander-level approval.",
+      category: "Military",
+    },
+    {
+      term: "MOE Predicted",
+      definition:
+        "The forecasted Measure of Effectiveness score a COA is expected to achieve if successfully executed — used to compare COA options.",
+      category: "IO Core",
+    },
+    {
+      term: "Target Audience",
+      definition:
+        "The specific group of individuals, organizations, or systems that an IO action is designed to influence, inform, or affect.",
+      category: "IO Core",
+    },
+    {
+      term: "MILDEC",
+      definition:
+        "Military Deception — actions executed to deliberately mislead adversary decision-makers as to friendly military capabilities, intentions, and operations.",
+      category: "IO Core",
+    },
+    {
+      term: "OPSEC",
+      definition:
+        "Operations Security — a process that identifies critical information and analyzes friendly actions to identify those that can be observed by adversary intelligence systems and can be interpreted to derive friendly COAs.",
+      category: "IO Core",
+    },
+    {
+      term: "PA",
+      definition:
+        "Public Affairs — communications with internal and external audiences (media, public, Congress) that provide truthful information about military activities. Distinct from MISO — PA does not target foreign audiences for behavioral change.",
+      category: "IO Core",
+    },
+    {
+      term: "CYBER (Capability)",
+      definition:
+        "Cyberspace Operations — activities to operate in, defend, and project power through cyberspace. Includes DCO (defensive) and OCO (offensive) actions authorized under specific legal authorities.",
+      category: "Cyber",
+    },
+    {
+      term: "DECEPTION",
+      definition:
+        "IO activity designed to cause adversaries to take, or fail to take, specific actions by manipulating their decision-making through false information, feints, or demonstrations.",
+      category: "IO Core",
+    },
+    {
+      term: "Resource Requirement",
+      definition:
+        "The specific assets, personnel, authorities, and platforms needed to execute a COA. Commanders weigh these against availability when selecting a course of action.",
+      category: "Military",
+    },
+  ],
+
+  sigman: [
+    {
+      term: "SIGMAN",
+      definition:
+        "Signature Management — the process of controlling and reducing observable indicators (technical, administrative, physical) that reveal friendly force capabilities, locations, intentions, or activities to adversary collection systems.",
+      category: "OPSEC",
+    },
+    {
+      term: "Signature",
+      definition:
+        "Any observable indicator that reveals information about friendly forces — including RF emissions, network traffic patterns, vehicle movements, and social media activity.",
+      category: "OPSEC",
+    },
+    {
+      term: "Exposure Score",
+      definition:
+        "A 0–100 numerical assessment of how visible a signature item is to adversary collection: 0 = no exposure, 100 = fully exposed to adversary intelligence collection. Scores above 70 require immediate action.",
+      category: "OPSEC",
+    },
+    {
+      term: "RF Emissions",
+      definition:
+        "Radio Frequency electromagnetic signals emitted by communications equipment, radar, and electronic systems. Detectable by adversary SIGINT/ELINT platforms at significant distances.",
+      category: "Technical",
+    },
+    {
+      term: "SIPR",
+      definition:
+        "Secret Internet Protocol Router Network (SIPRNet) — the US government's classified network for sharing SECRET information. Traffic volume patterns on SIPR can reveal operational tempo to adversaries.",
+      category: "Technical",
+    },
+    {
+      term: "Data Poisoning",
+      definition:
+        "An adversary technique targeting AI/ML systems by inserting corrupted or manipulated data into training or input pipelines to degrade the accuracy of AI-assisted analysis and recommendations.",
+      category: "Cyber",
+    },
+    {
+      term: "Technical Signature",
+      definition:
+        "Observable electronic or digital indicators of friendly force activity — including RF emissions, network traffic, spectrum usage, and system access patterns detectable by adversary sensors.",
+      category: "OPSEC",
+    },
+    {
+      term: "Administrative Signature",
+      definition:
+        "Observable indicators from routine military administrative activities — including unusual communication volume, predictable scheduling patterns, and social media posts that reveal operational intent.",
+      category: "OPSEC",
+    },
+    {
+      term: "Physical Signature",
+      definition:
+        "Observable indicators from physical activities — including vehicle movements, personnel patterns, equipment positioning, and base activity visible to adversary ISR.",
+      category: "OPSEC",
+    },
+    {
+      term: "Threshold",
+      definition:
+        "The maximum acceptable level of a signature item before corrective action is required. When a signature exceeds its threshold, SIGMAN protocols are triggered.",
+      category: "OPSEC",
+    },
+    {
+      term: "OPSEC Officer Review",
+      definition:
+        "Required human review by the unit Operations Security Officer before SIGMAN findings are acted upon. Ensures analytic results are validated by qualified personnel before implementation.",
+      category: "OPSEC",
+    },
+    {
+      term: "TEVV",
+      definition:
+        "Test, Evaluation, Verification, and Validation — the process of assessing whether AI/ML systems are accurate and reliable before operational use. Required for all AI-assisted SIGMAN tools.",
+      category: "Technical",
+    },
+  ],
+
+  annex: [
+    {
+      term: "Annex C (IO)",
+      definition:
+        "The Information Operations annex to a military operations order — the formal planning document that details IO objectives, tasks, coordinating instructions, and resource requirements for all IO activities.",
+      category: "Military",
+    },
+    {
+      term: "OPORD",
+      definition:
+        "Operations Order — a directive issued by a commander to subordinate commanders for the purpose of effecting the coordinated execution of an operation.",
+      category: "Military",
+    },
+    {
+      term: "EXORD",
+      definition:
+        "Execute Order — a command directive from the National Command Authority or combatant commander that authorizes and directs specific military operations to begin.",
+      category: "Military",
+    },
+    {
+      term: "FRAGO",
+      definition:
+        "Fragmentary Order — an abbreviated form of an operations order issued as needed to change or modify an existing order or plan.",
+      category: "Military",
+    },
+    {
+      term: "IO Annex",
+      definition:
+        "The IO-specific portion of an OPORD or OPLAN that provides detailed guidance on all Information Operations activities supporting the main operation.",
+      category: "Military",
+    },
+    {
+      term: "LOAC / ROE",
+      definition:
+        "Law of Armed Conflict / Rules of Engagement — legal frameworks governing the conduct of military operations including IO activities. All IO actions must comply with LOAC and approved ROE.",
+      category: "Legal",
+    },
+    {
+      term: "Title 10 / Title 50",
+      definition:
+        "US legal authorities: Title 10 (USC) governs military operations including cyberspace. Title 50 governs intelligence activities. Both apply to IO and cyber operations — legal review required.",
+      category: "Legal",
+    },
+    {
+      term: "Phase",
+      definition:
+        "A distinct period of an operation with specific objectives and tasks. IO plans are phased to align with the overall operational timeline: Phase 0 (Shape), I (Deter), II (Seize), III (Dominate), IV (Stabilize).",
+      category: "Military",
+    },
+    {
+      term: "CONOP",
+      definition:
+        "Concept of Operations — a statement that directs the manner in which a series of actions will be employed to accomplish a mission. IO CONOPs detail the specific sequence of IO activities.",
+      category: "Military",
+    },
+    {
+      term: "Coordinating Instructions",
+      definition:
+        "Directions applicable to two or more elements of a command — included in OPORD Annex C to synchronize IO activities across all units and ensure deconfliction.",
+      category: "Military",
+    },
+    {
+      term: "MISO Product",
+      definition:
+        "A specific output of Military Information Support Operations — such as a leaflet, radio broadcast, video, or social media post — designed to influence a target audience's behavior.",
+      category: "IO Core",
+    },
+    {
+      term: "Human Review Required",
+      definition:
+        "All AI-generated planning content (annexes, COAs, assessments) must be reviewed and validated by qualified human planners before submission to the commander. AI assists; humans decide.",
+      category: "Policy",
+    },
+  ],
+};
+
+// ── Category color map ────────────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, string> = {
+  "IO Core": "#00d4ff",
+  Cyber: "#a78bfa",
+  Intelligence: "#34d399",
+  Military: "#94a3b8",
+  Organization: "#60a5fa",
+  Threat: "#ef4444",
+  OPSEC: "#f59e0b",
+  Analysis: "#818cf8",
+  Technical: "#fb923c",
+  Legal: "#e879f9",
+  Classification: "#f43f5e",
+  Policy: "#22d3ee",
+  Capability: "#4ade80",
+};
+
+// ── Component ────────────────────────────────────────────────────────
+export function GlossaryPanel({ module, title }: GlossaryPanelProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // Merge universal + module-specific terms (deduplicate by term)
+  const moduleTerms = MODULE_TERMS[module] ?? [];
+  const seen = new Set<string>();
+  const allTerms: GlossaryEntry[] = [];
+  for (const t of [...moduleTerms, ...UNIVERSAL_TERMS]) {
+    if (!seen.has(t.term)) {
+      seen.add(t.term);
+      allTerms.push(t);
+    }
+  }
+
+  // Filter
+  const filtered = allTerms.filter((t) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q || t.term.toLowerCase().includes(q) || t.definition.toLowerCase().includes(q);
+    const matchesCategory = !activeCategory || t.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Unique categories
+  const categories = Array.from(new Set(allTerms.map((t) => t.category).filter(Boolean))) as string[];
+
+  return (
+    <div className="tactical-card flex-shrink-0 mt-3">
+      {/* ── Collapsible Header ─────────────────────────────────── */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#162035] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-[#f59e0b] text-sm">📖</span>
+          <div className="text-left">
+            <div className="text-[#f59e0b] text-xs font-bold tracking-widest">
+              {title ?? "IO DICTIONARY — GLOSSARY OF TERMS"}
+            </div>
+            <div className="text-[#475569] text-[9px] font-mono">
+              {allTerms.length} terms defined · Click to {open ? "collapse" : "expand"}
+            </div>
+          </div>
+        </div>
+        <span className="text-[#475569] text-xs font-mono">{open ? "▲ HIDE" : "▼ SHOW"}</span>
+      </button>
+
+      {/* ── Expanded Body ──────────────────────────────────────── */}
+      {open && (
+        <div className="border-t border-[#1e3a5f]">
+          {/* Search + Category Filter Bar */}
+          <div className="px-4 py-2.5 flex flex-wrap items-center gap-2 border-b border-[#1e3a5f] bg-[#060d1a]">
+            <input
+              type="text"
+              placeholder="Search terms..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-[#0d1f38] border border-[#1e3a5f] text-[#e2e8f0] text-xs px-2.5 py-1 rounded font-mono w-48 focus:outline-none focus:border-[#0891b2]"
+            />
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setActiveCategory(null)}
+                className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
+                  !activeCategory
+                    ? "border-[#00d4ff] text-[#00d4ff] bg-[#00d4ff10]"
+                    : "border-[#1e3a5f] text-[#475569] hover:border-[#334155]"
+                }`}
+              >
+                ALL
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                  className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors`}
+                  style={
+                    activeCategory === cat
+                      ? {
+                          borderColor: CATEGORY_COLORS[cat] ?? "#00d4ff",
+                          color: CATEGORY_COLORS[cat] ?? "#00d4ff",
+                          background: `${CATEGORY_COLORS[cat] ?? "#00d4ff"}15`,
+                        }
+                      : { borderColor: "#1e3a5f", color: "#475569" }
+                  }
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <span className="text-[#334155] text-[9px] font-mono ml-auto">
+              {filtered.length} / {allTerms.length} terms
+            </span>
+          </div>
+
+          {/* Terms Grid */}
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="col-span-3 text-center text-[#334155] text-xs font-mono py-8">
+                No terms match your search.
+              </div>
+            ) : (
+              filtered.map((entry) => {
+                const catColor = CATEGORY_COLORS[entry.category ?? ""] ?? "#475569";
+                return (
+                  <div
+                    key={entry.term}
+                    className="p-3 rounded border border-[#1e3a5f] bg-[#060d1a] hover:border-[#1e3a5f80] transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div
+                        className="text-[11px] font-black tracking-wide leading-tight"
+                        style={{ color: catColor }}
+                      >
+                        {entry.term}
+                      </div>
+                      {entry.category && (
+                        <span
+                          className="text-[8px] px-1.5 py-0.5 rounded border flex-shrink-0 font-mono"
+                          style={{ color: catColor, borderColor: `${catColor}60` }}
+                        >
+                          {entry.category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[#94a3b8] text-[10px] leading-relaxed">
+                      {entry.definition}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 py-2 border-t border-[#1e3a5f] bg-[#060d1a] flex items-center justify-between">
+            <span className="text-[#334155] text-[8px] font-mono">
+              IO DICTIONARY // 1st MIG · III MEF // FOR TRAINING AND OPERATIONAL USE
+            </span>
+            <span className="text-[#334155] text-[8px] font-mono">
+              UNCLASSIFIED DEFINITIONS — VERIFY CLASSIFICATION OF APPLIED CONTENT
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,54 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Dependabot Configuration — NIST 800-171: SI-2, SR-4, SR-5
+#
+# Automated dependency scanning and update PRs.
+# Ensures supply chain integrity and timely vulnerability patching.
+# ──────────────────────────────────────────────────────────────────────────────
+version: 2
+
+updates:
+  # npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "DjahankhahTech"
+    labels:
+      - "dependencies"
+      - "security"
+    # Group minor/patch updates to reduce PR noise
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Security updates always get their own PR
+    security-updates-only: false
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    reviewers:
+      - "DjahankhahTech"
+    labels:
+      - "ci"
+      - "security"
+    commit-message:
+      prefix: "ci"
