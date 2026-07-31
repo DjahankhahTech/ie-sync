@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
+import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
 
 // Drafts the IO Planner worksheet (mission, intent, audiences, effects,
 // messages, timing, constraints) + suggested available forces from the latest
@@ -107,11 +108,11 @@ Draft the IO planning worksheet now.`;
   const client = new Anthropic();
   try {
     const stream = client.messages.stream({
-      model: "claude-opus-4-8",
+      model: AI_MODEL,
       max_tokens: 16000,
       thinking: { type: "adaptive" },
-      output_config: { effort: "high", format: { type: "json_schema", schema: WORKSHEET_SCHEMA } },
-      system: SYSTEM_PROMPT,
+      output_config: { effort: aiEffort("worksheet"), format: { type: "json_schema", schema: WORKSHEET_SCHEMA } },
+      system: cachedSystem(SYSTEM_PROMPT),
       messages: [{ role: "user", content: userPrompt }],
     });
     const message = await stream.finalMessage();

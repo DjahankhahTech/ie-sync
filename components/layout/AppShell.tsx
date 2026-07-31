@@ -11,6 +11,7 @@ import { IOPlanner } from "@/components/io-planner/IOPlanner";
 import { SIGMANMonitor } from "@/components/sigman/SIGMANMonitor";
 import { SensorFusion } from "@/components/sensor-fusion/SensorFusion";
 import { STTab } from "@/components/st/STTab";
+import { DoctrineLibrary } from "@/components/doctrine/DoctrineLibrary";
 
 const moduleMap: Record<string, React.ComponentType> = {
   cop: IEOverlay,
@@ -20,6 +21,7 @@ const moduleMap: Record<string, React.ComponentType> = {
   "io-planner": IOPlanner,
   sigman: SIGMANMonitor,
   "s-and-t": STTab,
+  doctrine: DoctrineLibrary,
 };
 
 export function AppShell() {

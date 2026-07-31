@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
+import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
+import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // SIGMAN (Signature Management) OSINT scan. SIGMAN is about FRIENDLY-force
 // signature / OPSEC: what an adversary could learn about US & allied posture.
@@ -56,6 +58,10 @@ HARD RULES:
 - Classification UNCLASSIFIED // OSINT. AI-generated DRAFT requiring human OPSEC officer validation.
 - overallExposure 0-100 and posture reflect the aggregate friendly-force exposure visible in this OSINT set. If little/no friendly-force exposure is present, say so honestly (low score, few/no items).`;
 
+// The catalogued military-library research corpus, appended once so the whole
+// system block stays a stable prefix that the prompt cache can reuse.
+const GROUNDED_SYSTEM_PROMPT = `${SYSTEM_PROMPT}\n\n${DOCTRINE_LIBRARY_PROMPT}`;
+
 // Shared SIGMAN scan core — used by POST (client items) and the cached GET.
 async function runSigman(gccId: GCCId, items: FeedItemInput[]): Promise<Record<string, unknown> & { error?: string; status?: number }> {
   const config = GCC_CONFIGS[gccId];
@@ -78,11 +84,11 @@ Produce the SIGMAN open-source exposure assessment.`;
   try {
     const client = new Anthropic();
     const stream = client.messages.stream({
-      model: "claude-opus-4-8",
+      model: AI_MODEL,
       max_tokens: 20000,
       thinking: { type: "adaptive" },
-      output_config: { effort: "high", format: { type: "json_schema", schema: SIGMAN_SCHEMA } },
-      system: SYSTEM_PROMPT,
+      output_config: { effort: aiEffort("sigman"), format: { type: "json_schema", schema: SIGMAN_SCHEMA } },
+      system: cachedSystem(GROUNDED_SYSTEM_PROMPT),
       messages: [{ role: "user", content: userPrompt }],
     });
     const message = await stream.finalMessage();
@@ -143,7 +149,7 @@ export async function GET(request: NextRequest) {
   try {
     const data = force
       ? await gen()
-      : await unstable_cache(gen, ["sigman", "v2", gccId, dayET, slot], { revalidate: 21600, tags: ["sigman", `sigman-${gccId}`] })();
+      : await unstable_cache(gen, ["sigman", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["sigman", `sigman-${gccId}`] })();
     return NextResponse.json({ ...data, day: dayET, slot });
   } catch (e) {
     const err = e as Error & { status?: number };

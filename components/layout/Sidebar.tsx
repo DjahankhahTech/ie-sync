@@ -12,6 +12,7 @@ const modules = [
   { id: "io-planner", label: "IO PLANNER", icon: "◆" },
   { id: "sigman", label: "SIGMAN MONITOR", icon: "◎" },
   { id: "s-and-t", label: "S&T RESOURCES", icon: "⚛" },
+  { id: "doctrine", label: "DOCTRINE LIBRARY", icon: "▤" },
 ];
 
 // Top navigation — a single dropdown module switcher.

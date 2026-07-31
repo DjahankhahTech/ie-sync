@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync-library": "node scripts/sync-military-library.mjs",
+    "sync-library:check": "node scripts/sync-military-library.mjs --check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

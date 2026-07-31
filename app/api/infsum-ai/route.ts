@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
+import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
+import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // AI-generated executive Daily Information Summary (INFSUM). Generated once per
 // ET-day and cached (Vercel Data Cache) so it does NOT regenerate on every page
@@ -37,6 +39,10 @@ Produce:
 
 Rules: ground everything in the supplied OSINT; do not invent events. Be concise and operational; use proper IO/OIE vernacular. Classification UNCLASSIFIED // OSINT; this is an AI-generated DRAFT requiring human analyst validation.`;
 
+// The catalogued military-library research corpus, appended once so the whole
+// system block stays a stable prefix that the prompt cache can reuse.
+const GROUNDED_SYSTEM_PROMPT = `${SYSTEM_PROMPT}\n\n${DOCTRINE_LIBRARY_PROMPT}`;
+
 interface FeedItem { title: string; summary?: string; source?: string; link?: string; published?: string }
 
 async function generate(gccId: GCCId, origin: string) {
@@ -65,11 +71,11 @@ Write the Daily Information Summary for this AOR, grounded in the OSINT above.`;
 
   const client = new Anthropic();
   const stream = client.messages.stream({
-    model: "claude-opus-4-8",
+    model: AI_MODEL,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: { type: "json_schema", schema: SCHEMA } },
-    system: SYSTEM_PROMPT,
+    output_config: { effort: aiEffort("infsum"), format: { type: "json_schema", schema: SCHEMA } },
+    system: cachedSystem(GROUNDED_SYSTEM_PROMPT),
     messages: [{ role: "user", content: userPrompt }],
   });
   const message = await stream.finalMessage();
@@ -117,7 +123,7 @@ export async function GET(request: NextRequest) {
     if (r.error) throw new Error(String(r.error));
     return r;
   };
-  const cached = unstable_cache(gen, ["infsum-ai", "v2", gccId, dayET, slot], { revalidate: 21600, tags: ["infsum-ai", `infsum-ai-${gccId}`] });
+  const cached = unstable_cache(gen, ["infsum-ai", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["infsum-ai", `infsum-ai-${gccId}`] });
 
   try {
     const data = force ? await gen() : await cached();

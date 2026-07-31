@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
+import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
+import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // COA / Annex I / ITCO planning engine. Takes a planner's fill-in-the-blank
 // worksheet + the available IO forces + the AO threat picture and synthesizes
@@ -120,6 +122,10 @@ HARD RULES:
 
 Do not fabricate classified intelligence. Keep numeric estimates honest.`;
 
+// The catalogued military-library research corpus, appended once so the whole
+// system block stays a stable prefix that the prompt cache can reuse.
+const GROUNDED_SYSTEM_PROMPT = `${SYSTEM_PROMPT}\n\n${DOCTRINE_LIBRARY_PROMPT}`;
+
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI engine not configured — ANTHROPIC_API_KEY is not set." }, { status: 503 });
@@ -181,11 +187,11 @@ Produce the detailed COA, the complete Annex I (Information), and the ITCO.`;
   const client = new Anthropic();
   try {
     const stream = client.messages.stream({
-      model: "claude-opus-4-8",
+      model: AI_MODEL,
       max_tokens: 40000,
       thinking: { type: "adaptive" },
-      output_config: { effort: "high", format: { type: "json_schema", schema: PLAN_SCHEMA } },
-      system: SYSTEM_PROMPT,
+      output_config: { effort: aiEffort("plan"), format: { type: "json_schema", schema: PLAN_SCHEMA } },
+      system: cachedSystem(GROUNDED_SYSTEM_PROMPT),
       messages: [{ role: "user", content: userPrompt }],
     });
     const message = await stream.finalMessage();
