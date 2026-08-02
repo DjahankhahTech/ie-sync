@@ -2488,25 +2488,9 @@ export function getGCCMockData(gccId: GCCId): GCCMockData {
   return GCC_MOCK_DATA[gccId] ?? indopacomData;
 }
 
-/** Generate 30-day historical MOE data with GCC-specific characteristics */
-export function getHistoricalMoeData(gccId: GCCId) {
-  // Each GCC has different baseline threat levels
-  const baselines: Record<GCCId, { hostile: number; sentiment: number; activity: number }> = {
-    INDOPACOM: { hostile: 38, sentiment: 41, activity: 11 },
-    CENTCOM:   { hostile: 44, sentiment: 38, activity: 14 },
-    EUCOM:     { hostile: 31, sentiment: 52, activity: 8  },
-    AFRICOM:   { hostile: 52, sentiment: 29, activity: 18 },
-    SOUTHCOM:  { hostile: 28, sentiment: 38, activity: 7  },
-    NORTHCOM:  { hostile: 35, sentiment: 58, activity: 10 },
-    SPACECOM:  { hostile: 33, sentiment: 47, activity: 9  },
-    CYBERCOM:  { hostile: 49, sentiment: 40, activity: 22 },
-  };
-
-  const b = baselines[gccId];
-  return Array.from({ length: 30 }, (_, i) => ({
-    day: `D-${29 - i}`,
-    hostileReach: Math.max(10, b.hostile - 15 + Math.random() * 12 + (i > 20 ? (i - 20) * 0.8 : 0)),
-    sentiment: Math.max(20, b.sentiment + 10 - Math.random() * 8 - (i > 22 ? (i - 22) * 0.6 : 0)),
-    adversaryActivity: Math.max(1, b.activity - 8 + Math.random() * 4 + (i > 25 ? i - 25 : 0)),
-  }));
-}
+// getHistoricalMoeData() was removed here. It synthesised a 30-day "trend" from
+// Math.random() around hardcoded per-GCC baselines and re-rolled on every
+// render, which read as a campaign track record but carried no information.
+// The Running Estimate now charts real recorded snapshots via /api/history
+// (see lib/history-store.ts) and renders an explicit empty state when the
+// archive has nothing in it yet.

@@ -34,6 +34,52 @@ System prompts are sent as cacheable blocks, so repeat runs read the ~7 k-token
 prompt prefix (doctrine library included) from cache instead of re-billing it —
 `/api/analyze` reports `cache_read_input_tokens` in its `usage` for checking this.
 
+## Assessment history (persistence)
+
+IE-SYNC used to generate a Running Estimate three times a day per CCMD and throw
+every one away — `unstable_cache` expires in six hours and is wiped on each
+deploy. Nothing could be trended and no claim the tool made could be scored
+against what actually happened.
+
+`lib/history-store.ts` keeps one immutable row per `(gcc, product, day, slot)` in
+Neon Postgres. **The first write for a slot wins**: a forced regeneration
+(`?force=1`) does not overwrite the snapshot already on record, so the archive
+reflects what the tool claimed at the time rather than a later, better-informed
+rewrite. That property is what makes it usable as a track record.
+
+```bash
+vercel integration add neon      # provisions DATABASE_URL into the project
+vercel env pull .env.local --yes # then pull it locally
+```
+
+The schema is created on first write (`CREATE TABLE IF NOT EXISTS`) — there is no
+migration step. Without `DATABASE_URL` the whole module is a no-op: the app builds
+and runs normally, `/api/history` reports `enabled: false`, and the trend chart
+renders an explicit empty state. Writes are best-effort and never fail the
+assessment the analyst asked for.
+
+```bash
+GET /api/history?gcc=INDOPACOM&days=30&product=analyze
+```
+
+Charted series are derived from each stored assessment, not measured:
+
+| Series | Derivation |
+|---|---|
+| Adversarial reach share % | adversarial thread reach ÷ total thread reach |
+| Mean narrative sentiment | mean of thread sentiment, model's −1..1 scaled to −100..100 |
+| Adversarial threads | count of threads flagged adversarial |
+
+Reach *share* is used rather than raw reach because the model emits reach as a
+best-estimate order of magnitude; the ratio is far more stable across runs than
+either absolute figure.
+
+> The previous 30-day MOE chart was fabricated — `getHistoricalMoeData()` built it
+> from `Math.random()` around hardcoded per-GCC baselines and re-rolled it on every
+> render. It has been removed, along with a second unused `historicalMoeData`
+> generator in `lib/mock-data.ts`. Nothing synthetic is substituted when the
+> archive is empty.
+
 ## Doctrine library (military-library)
 
 The **DOCTRINE LIBRARY** module and the doctrinal citations in the AI products are

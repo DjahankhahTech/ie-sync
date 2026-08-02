@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
+import { deriveMetrics, recordSnapshot } from "@/lib/history-store";
 import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // AI assessment engine. Takes REAL ingested OSINT (from /api/feeds) and uses
@@ -215,6 +216,23 @@ export async function GET(request: NextRequest) {
   const gen = async () => {
     const r = await runAnalysis(gccId, await fetchAORItems(gccId, origin));
     if (r.error) { const e = new Error(String(r.error)) as Error & { status?: number }; e.status = (r.status as number) ?? 502; throw e; }
+    // Append to the immutable history on every fresh generation — this closure
+    // runs only on a cache miss or `?force=1`, so the archive gets one row per
+    // slot and a forced re-run cannot overwrite what was claimed earlier.
+    // Best-effort by contract: recordSnapshot never throws.
+    await recordSnapshot({
+      gcc: gccId,
+      product: "analyze",
+      day: dayET,
+      slot,
+      model: typeof r.model === "string" ? r.model : null,
+      effort: aiEffort("analyze"),
+      payload: r,
+      ...deriveMetrics(
+        (r.assessment ?? {}) as Parameters<typeof deriveMetrics>[0],
+        typeof r.sourceCount === "number" ? r.sourceCount : null
+      ),
+    });
     return r;
   };
   try {

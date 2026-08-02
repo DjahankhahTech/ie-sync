@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useIEStore } from "@/store/ie-store";
-import { getHistoricalMoeData } from "@/lib/gcc-mock-data";
 import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
 import {
   LineChart,
@@ -69,9 +68,46 @@ interface REVersion {
   changeNote: string;
 }
 
+// ── Recorded assessment history ───────────────────────────────────────────
+// Real snapshots written by /api/analyze on each fresh generation. There is no
+// synthetic fallback on purpose: an empty archive renders as an empty chart
+// with an explanation, never as placeholder data that could be mistaken for a
+// track record.
+interface HistoryPoint {
+  day: string;
+  slot: string;
+  adversarialReachShare: number | null;
+  meanSentiment: number | null;
+  adversarialThreads: number;
+}
+
 export function RunningEstimateModule() {
   const { runningEstimate, moeMetrics, mopMetrics, activeGCC, assessment, assessmentLoading, assessmentError, generateAssessment, suggestedMOE, suggestedMOP } = useIEStore();
-  const historicalMoeData = getHistoricalMoeData(activeGCC);
+  const [history, setHistory] = useState<HistoryPoint[] | null>(null);
+  const [historyEnabled, setHistoryEnabled] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistory(null);
+    fetch(`/api/history?gcc=${activeGCC}&days=30`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { enabled?: boolean; points?: HistoryPoint[] }) => {
+        if (cancelled) return;
+        setHistoryEnabled(d.enabled !== false);
+        setHistory(Array.isArray(d.points) ? d.points : []);
+      })
+      .catch(() => { if (!cancelled) setHistory([]); });
+    return () => { cancelled = true; };
+  }, [activeGCC]);
+
+  const historyChartData = (history ?? []).map((p) => ({
+    // "08-01 1200" — day plus slot, since there are up to three points per day.
+    label: `${p.day.slice(5)} ${p.slot}`,
+    adversarialReachShare: p.adversarialReachShare,
+    meanSentiment: p.meanSentiment,
+    adversarialThreads: p.adversarialThreads,
+  }));
+
   const [showMoeDefs, setShowMoeDefs] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState<REVersion[]>([
@@ -331,36 +367,65 @@ export function RunningEstimateModule() {
           </div>
         </div>
 
-        {/* MOE Trend Chart */}
+        {/* Recorded assessment trend — real snapshots only */}
         <div className="tactical-card p-4">
-          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">RECOMMENDED MOE TREND — 30 DAY CAMPAIGN</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={historicalMoeData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid stroke="#1e3a5f" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="day"
-                tick={{ fill: "#475569", fontSize: 9 }}
-                interval={9}
-              />
-              <YAxis tick={{ fill: "#475569", fontSize: 9 }} />
-              <Tooltip
-                contentStyle={{
-                  background: "#0f1829",
-                  border: "1px solid #1e3a5f",
-                  borderRadius: "4px",
-                  fontSize: "11px",
-                  color: "#e2e8f0",
-                }}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: "10px", color: "#94a3b8" }}
-              />
-              <ReferenceLine y={50} stroke="#10b981" strokeDasharray="4 2" label={{ value: "Sentiment Target", fill: "#10b981", fontSize: 9 }} />
-              <Line type="monotone" dataKey="hostileReach" stroke="#ef4444" name="Hostile Reach%" dot={false} strokeWidth={2} />
-              <Line type="monotone" dataKey="sentiment" stroke="#10b981" name="Friendly Sentiment%" dot={false} strokeWidth={2} />
-              <Line type="monotone" dataKey="adversaryActivity" stroke="#f59e0b" name="Adv. IO Actions/day" dot={false} strokeWidth={1.5} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">ASSESSMENT TREND — RECORDED SNAPSHOTS</div>
+            {historyChartData.length > 0 && (
+              <div className="text-[9px] text-[#475569]">{historyChartData.length} snapshot{historyChartData.length === 1 ? "" : "s"} · 30d</div>
+            )}
+          </div>
+
+          {history === null ? (
+            <div className="h-[220px] flex items-center justify-center text-[10px] text-[#475569]">
+              Loading recorded history…
+            </div>
+          ) : historyChartData.length === 0 ? (
+            <div className="h-[220px] flex flex-col items-center justify-center gap-2 px-6 text-center">
+              <div className="text-[#f59e0b] text-lg">⚑</div>
+              <div className="text-[11px] text-[#94a3b8] font-bold">No recorded history yet</div>
+              <div className="text-[10px] text-[#64748b] leading-relaxed max-w-md">
+                {historyEnabled
+                  ? "This chart plots only assessments this system actually generated and stored. The archive fills as the 0600/1200/1800 ET runs execute — expect a readable trend after roughly three days."
+                  : "History storage is not provisioned (DATABASE_URL is unset), so no assessment is being retained. Until it is, every generated product is discarded when its cache expires."}
+              </div>
+              <div className="text-[9px] text-[#475569] mt-1">
+                No placeholder data is shown here by design.
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={historyChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid stroke="#1e3a5f" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#475569", fontSize: 9 }}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
+                />
+                <YAxis tick={{ fill: "#475569", fontSize: 9 }} domain={[-100, 100]} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0f1829",
+                    border: "1px solid #1e3a5f",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    color: "#e2e8f0",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "10px", color: "#94a3b8" }} />
+                {/* Neutral sentiment, not a target — the model emits sentiment on -1..1, scaled here to -100..100. */}
+                <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 2" label={{ value: "Neutral", fill: "#475569", fontSize: 9 }} />
+                <Line type="monotone" dataKey="adversarialReachShare" stroke="#ef4444" name="Adversarial Reach Share %" dot={false} strokeWidth={2} connectNulls />
+                <Line type="monotone" dataKey="meanSentiment" stroke="#10b981" name="Mean Narrative Sentiment" dot={false} strokeWidth={2} connectNulls />
+                <Line type="monotone" dataKey="adversarialThreads" stroke="#f59e0b" name="Adversarial Threads" dot={false} strokeWidth={1.5} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+
+          <div className="text-[9px] text-[#475569] mt-2 leading-relaxed">
+            Derived from stored AI-DRAFT assessments — what the tool claimed at each run, not a measured intelligence series.
+          </div>
         </div>
       </div>
 

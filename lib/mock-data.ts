@@ -734,9 +734,6 @@ export const runningEstimate: RunningEstimate = {
   priority: "IE1",
 };
 
-export const historicalMoeData = Array.from({ length: 30 }, (_, i) => ({
-  day: `D-${29 - i}`,
-  hostileReach: Math.max(10, 20 + Math.random() * 25 + (i > 20 ? i - 20 : 0)),
-  sentiment: Math.max(30, 55 - Math.random() * 10 - (i > 22 ? (i - 22) * 0.7 : 0)),
-  adversaryActivity: Math.max(1, 3 + Math.random() * 5 + (i > 25 ? i - 25 : 0)),
-}));
+// historicalMoeData was removed here — a second Math.random() "trend" series,
+// unreferenced but sitting one import away from looking like real history.
+// Recorded snapshots come from /api/history (see lib/history-store.ts).
