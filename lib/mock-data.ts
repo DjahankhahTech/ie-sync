@@ -133,11 +133,22 @@ export interface ThreatEntity {
   designation: string;
   type: "STATE" | "NON-STATE" | "PROXY" | "UNKNOWN";
   location: string;
-  grid: [number, number]; // normalized 0-100
+  /**
+   * Normalized 0-100 display grid, hand-authored for reference-library entries
+   * only. Live AI entities carry no grid — the map resolves their `location`
+   * string instead (see lib/threat-geo.ts) and omits anything that is not a
+   * real place, rather than inventing a position.
+   */
+  grid?: [number, number];
   activity: string;
   threat: ThreatLevel;
   confidence: number;
-  lastSeen: string;
+  /**
+   * When this entity was REPORTED — i.e. when the assessment ran. Not an
+   * observation time: nothing in the pipeline observes these entities, and the
+   * model has no field to state when one was last seen.
+   */
+  reportedAt: string;
   capabilities: string[];
   sourceUrl: string;   // Verifiable public source (CISA, DOJ, MITRE ATT&CK, etc.)
   sourceLabel: string; // Short label for the source
@@ -587,7 +598,7 @@ export const threatEntities: ThreatEntity[] = [
     activity: "Coordinated IO / SIGINT collection / network intrusion",
     threat: "CRITICAL",
     confidence: 88,
-    lastSeen: "2025-03-15T09:28Z",
+    reportedAt: "2025-03-15T09:28Z",
     capabilities: ["CYBER", "SIGINT", "MISO", "DECEPTION"],
     sourceUrl: "https://attack.mitre.org/groups/G0096/",
     sourceLabel: "MITRE ATT&CK G0096",
@@ -601,7 +612,7 @@ export const threatEntities: ThreatEntity[] = [
     activity: "Coordinated inauthentic behavior; multi-platform influence operations targeting US audiences",
     threat: "HIGH",
     confidence: 71,
-    lastSeen: "2025-03-15T07:55Z",
+    reportedAt: "2025-03-15T07:55Z",
     capabilities: ["MISO", "SOCMINT"],
     sourceUrl: "https://attack.mitre.org/groups/G1015/",
     sourceLabel: "MITRE ATT&CK G1015",
@@ -615,7 +626,7 @@ export const threatEntities: ThreatEntity[] = [
     activity: "Telecom network intrusion; ELINT/signals collection on US government targets",
     threat: "CRITICAL",
     confidence: 85,
-    lastSeen: "2025-03-15T09:28Z",
+    reportedAt: "2025-03-15T09:28Z",
     capabilities: ["CYBER", "SIGINT", "EW"],
     sourceUrl: "https://www.cisa.gov/resources-tools/resources/enhanced-visibility-and-hardening-guidance-communications-infrastructure",
     sourceLabel: "CISA Advisory Dec 2024",
@@ -629,7 +640,7 @@ export const threatEntities: ThreatEntity[] = [
     activity: "Pre-positioning in critical infrastructure; living-off-the-land techniques; C2 botnet",
     threat: "CRITICAL",
     confidence: 85,
-    lastSeen: "2025-03-15T09:03Z",
+    reportedAt: "2025-03-15T09:03Z",
     capabilities: ["CYBER"],
     sourceUrl: "https://www.justice.gov/archives/opa/pr/us-government-disrupts-botnet-peoples-republic-china-used-conceal-hacking-critical",
     sourceLabel: "DOJ / FBI Jan 2024",

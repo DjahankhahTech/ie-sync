@@ -34,7 +34,7 @@ const threatBlock = (threats: ThreatEntity[]) =>
     ? threats
         .map(
           (t, i) =>
-            `      (${i + 1}) ${t.designation} [${t.type} // ${t.threat}, confidence ${t.confidence}%] — ${t.activity}. Capabilities: ${t.capabilities.join(", ")}. Last seen ${t.lastSeen}. Source: ${t.sourceLabel}.`
+            `      (${i + 1}) ${t.designation} [${t.type} // ${t.threat}, confidence ${t.confidence}%] — ${t.activity}. Capabilities: ${t.capabilities.join(", ")}. Last seen ${t.reportedAt}. Source: ${t.sourceLabel}.`
         )
         .join("\n")
     : "      (None tracked in current Running Estimate.)";

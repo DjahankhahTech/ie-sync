@@ -55,7 +55,9 @@ const ASSESSMENT_SCHEMA = {
           location: { type: "string" },
           activity: { type: "string" },
           threat: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
-          confidence: { type: "integer" },
+          // Rendered as a percentage downstream, so bound it here rather than
+          // trusting the model to stay in range (also clamped in the store).
+          confidence: { type: "integer", minimum: 0, maximum: 100 },
           capabilities: { type: "array", items: { type: "string" } },
           sourceLabel: { type: "string" },
           sourceUrl: { type: "string" },

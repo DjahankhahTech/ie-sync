@@ -6,28 +6,15 @@ import { useIEStore } from "@/store/ie-store";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 import { getHistoricalThreats, getHistoricalNarratives, layerOf, type IELayer } from "@/lib/threat-library";
 import { getStrategicSites, getAllStrategicSites, MARITIME_CHOKEPOINTS, SITE_META, type SiteCategory } from "@/lib/strategic-locations";
+import { resolveThreatLocation } from "@/lib/threat-geo";
 import type { CableLine } from "./TacticalMap";
 
-// CCMD AOR bounds — mirror of the map's grid→latlng bounds, used to precompute
-// real coordinates for reference threats so they position correctly in the
-// multi-CCMD "ALL" view (the map otherwise maps the grid into the active AOR).
-const SCOPE_BOUNDS: Record<GCCId, { latMin: number; latMax: number; lngMin: number; lngMax: number }> = {
-  INDOPACOM: { latMin: -10, latMax: 55, lngMin: 80, lngMax: 180 },
-  CENTCOM:   { latMin: 10, latMax: 45, lngMin: 30, lngMax: 75 },
-  EUCOM:     { latMin: 35, latMax: 72, lngMin: -10, lngMax: 60 },
-  AFRICOM:   { latMin: -35, latMax: 35, lngMin: -20, lngMax: 55 },
-  SOUTHCOM:  { latMin: -55, latMax: 25, lngMin: -90, lngMax: -30 },
-  NORTHCOM:  { latMin: 20, latMax: 75, lngMin: -140, lngMax: -60 },
-  SPACECOM:  { latMin: -55, latMax: 75, lngMin: -160, lngMax: 170 },
-  CYBERCOM:  { latMin: -55, latMax: 75, lngMin: -160, lngMax: 170 },
-};
+// Threat positions are resolved from each entity's stated location by
+// lib/threat-geo.ts. The AOR-bounds grid projection that used to sit here
+// turned an array index into a coordinate and has been removed.
+
 const ALL_GCCS = Object.keys(GCC_CONFIGS) as GCCId[];
 type MapScope = "ALL" | GCCId;
-
-function gridToLL(grid: [number, number], g: GCCId): [number, number] {
-  const b = SCOPE_BOUNDS[g];
-  return [b.latMin + (grid[1] / 100) * (b.latMax - b.latMin), b.lngMin + (grid[0] / 100) * (b.lngMax - b.lngMin)];
-}
 
 const TacticalMap = dynamic(() => import("./TacticalMap"), {
   ssr: false,
@@ -47,21 +34,34 @@ export function IEMapTab() {
   const isAll = mapScope === "ALL";
 
   // OIE information layers — INFORMATIONAL is emphasized (listed first).
-  const [activeLayers, setActiveLayers] = useState<Record<IELayer, boolean>>({ INFORMATIONAL: true, TECHNICAL: true, PHYSICAL: true });
+  const [activeLayers, setActiveLayers] = useState<Record<IELayer, boolean>>({ INFORMATIONAL: true, TECHNICAL: true, PHYSICAL: true, UNKNOWN: true });
   const toggleLayer = (l: IELayer) => setActiveLayers((p) => ({ ...p, [l]: !p[l] }));
 
   // Threats for each in-scope CCMD, with real coordinates precomputed. Live
   // store threats are used for the active AOR when available; otherwise the
   // sourced reference library. Each carries _layer + lat/lng.
+  // Coordinates come from resolving the entity's stated location, never from a
+  // synthesised grid. Entities whose location is non-physical (cyberspace,
+  // global platforms) resolve to null and are counted, not plotted.
   const threatsFor = (g: GCCId) => {
     const base = g === activeGCC && threatEntities.length > 0 ? threatEntities : getHistoricalThreats(g);
     return base.map((e) => {
-      const [lat, lng] = gridToLL(e.grid, g);
-      return { ...e, _layer: layerOf(e), lat, lng };
+      const geo = resolveThreatLocation(e.location);
+      return {
+        ...e,
+        _layer: layerOf(e),
+        _gcc: g,
+        lat: geo?.lat,
+        lng: geo?.lng,
+        _place: geo?.place,
+        _precision: geo?.precision,
+      };
     });
   };
   const allThreats = scopeGCCs.flatMap(threatsFor);
   const visibleThreats = allThreats.filter((e) => activeLayers[e._layer]);
+  const mappableThreats = visibleThreats.filter((e) => typeof e.lat === "number");
+  const unmappedCount = visibleThreats.length - mappableThreats.length;
   const liveForScope = scopeGCCs.includes(activeGCC) && threatEntities.length > 0;
 
   // Narratives only render as map zones when the focused scope is the active
@@ -86,11 +86,13 @@ export function IEMapTab() {
     PHYSICAL: allThreats.filter((e) => e._layer === "PHYSICAL").length,
     TECHNICAL: allThreats.filter((e) => e._layer === "TECHNICAL").length,
     INFORMATIONAL: allThreats.filter((e) => e._layer === "INFORMATIONAL").length + baseNarratives.length,
+    UNKNOWN: allThreats.filter((e) => e._layer === "UNKNOWN").length,
   };
   const LAYER_META: { key: IELayer; label: string; color: string; desc: string }[] = [
     { key: "INFORMATIONAL", label: "INFORMATIONAL", color: "#f59e0b", desc: "narratives · media · influence operations" },
     { key: "TECHNICAL", label: "TECHNICAL", color: "#00d4ff", desc: "networks · cyber · SIGINT — information systems" },
     { key: "PHYSICAL", label: "PHYSICAL", color: "#10b981", desc: "platforms · emitters · installations · geography" },
+    { key: "UNKNOWN", label: "UNCLASSIFIED LAYER", color: "#64748b", desc: "capabilities did not map to an OIE layer — not assumed" },
   ];
 
   // Global infrastructure layers (flights & AIS removed per OIE focus).
@@ -149,6 +151,14 @@ export function IEMapTab() {
             <div className="text-[#475569] text-[10px] font-mono">
               ESRI WORLD IMAGERY // WGS-84 // {scopeAor}
               {!liveForScope && <span className="ml-2 px-1.5 py-0.5 border border-[#f59e0b] text-[#f59e0b] rounded">REFERENCE — run AI assessment for live AOR picture</span>}
+              {unmappedCount > 0 && (
+                <span
+                  className="ml-2 px-1.5 py-0.5 border border-[#64748b] text-[#64748b] rounded"
+                  title="These entities operate in cyberspace or across global platforms. They have no physical position to plot, so they are listed in the IE Overlay rather than placed on the map."
+                >
+                  {unmappedCount} NOT MAPPABLE
+                </span>
+              )}
             </div>
           </div>
           {/* OIE layer toggles */}
@@ -192,7 +202,7 @@ export function IEMapTab() {
       {/* Full-bleed map with on-map controls */}
       <div className="flex-1 relative overflow-hidden">
         <TacticalMap
-          entities={visibleThreats}
+          entities={mappableThreats}
           narratives={visibleNarratives}
           cables={globalLayers.cables ? cables : []}
           sites={mapSites}

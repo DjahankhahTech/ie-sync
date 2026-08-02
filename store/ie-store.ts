@@ -187,6 +187,12 @@ export interface SigmanResult {
 
 // Alerts are derived from real signals (live feeds, generated assessments),
 // not from fabricated theater data. Start empty.
+/** Confidence is rendered as a percentage; keep it inside 0-100 whatever arrives. */
+function clampConfidence(c: unknown): number {
+  if (typeof c !== "number" || !Number.isFinite(c)) return 0;
+  return Math.min(100, Math.max(0, Math.round(c)));
+}
+
 function buildAlertsForGCC(_gcc: GCCId): Alert[] {
   return [];
 }
@@ -287,12 +293,22 @@ export const useIEStore = create<IEState>((set, get) => ({
       const nowDtg = new Date().toISOString();
 
       const threatEntities: ThreatEntity[] = (a.threatEntities ?? []).map(
-        (t: Omit<ThreatEntity, "id" | "grid" | "lastSeen"> & { lastSeen?: string }, i: number) => ({
+        (t: Omit<ThreatEntity, "id" | "grid" | "reportedAt"> & { confidence?: number }, i: number) => ({
           ...t,
           id: `TE-${gcc}-${i + 1}`,
-          // spread entities across the normalized 0-100 threat grid for the COP map
-          grid: [15 + (i * 23) % 70, 20 + (i * 31) % 60] as [number, number],
-          lastSeen: t.lastSeen ?? json.generatedAt,
+          // No `grid`. Positions used to be synthesised from the array index and
+          // mapped into the AOR box, which put entities at coordinates that had
+          // nothing to do with their stated location and moved if the list was
+          // reordered. The map now resolves the `location` string instead, and
+          // simply does not plot entities whose location is not a real place.
+          //
+          // Not `lastSeen` either: the model cannot emit an observation time
+          // (it is absent from the schema, which is additionalProperties:false),
+          // so anything here is the report time, not a sighting.
+          reportedAt: json.generatedAt,
+          // The schema bounds this 0-100, but the value is rendered as a
+          // percentage, so clamp rather than trust.
+          confidence: clampConfidence(t.confidence),
         })
       );
 

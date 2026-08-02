@@ -5,6 +5,7 @@ import { useIEStore } from "@/store/ie-store";
 import { GCC_CONFIGS } from "@/lib/gcc-config";
 import type { ThreatEntity, NarrativeThread } from "@/lib/mock-data";
 import { SITE_META } from "@/lib/strategic-locations";
+import { resolveThreatLocation, precisionNote, type GeoPrecision } from "@/lib/threat-geo";
 
 export interface CableLine { name: string; segments: [number, number][][] }
 export interface ShipDot { mmsi: number; lat: number; lng: number; name: string; sog: number | null; cog: number | null; type: string }
@@ -35,6 +36,10 @@ interface TacticalMapProps {
 interface ThreatMarkerData {
   lat: number;
   lng: number;
+  /** Gazetteer entry the location string resolved to. */
+  place: string;
+  /** How coarse that resolution is — surfaced in the popup. */
+  precision: GeoPrecision;
   designation: string;
   type: string;
   activity: string;
@@ -56,24 +61,10 @@ interface NarrativeZoneData {
   platform: string;
 }
 
-// Convert normalized grid [0-100, 0-100] to real-world lat/lng within GCC AOR bounds
-const GCC_BOUNDS: Record<string, { latMin: number; latMax: number; lngMin: number; lngMax: number }> = {
-  INDOPACOM: { latMin: -10, latMax: 55,  lngMin: 80,   lngMax: 180 },
-  CENTCOM:   { latMin: 10,  latMax: 45,  lngMin: 30,   lngMax: 75  },
-  EUCOM:     { latMin: 35,  latMax: 72,  lngMin: -10,  lngMax: 60  },
-  AFRICOM:   { latMin: -35, latMax: 35,  lngMin: -20,  lngMax: 55  },
-  SOUTHCOM:  { latMin: -55, latMax: 25,  lngMin: -90,  lngMax: -30 },
-  NORTHCOM:  { latMin: 20,  latMax: 75,  lngMin: -140, lngMax: -60 },
-  SPACECOM:  { latMin: -55, latMax: 75,  lngMin: -160, lngMax: 170 },
-  CYBERCOM:  { latMin: -55, latMax: 75,  lngMin: -160, lngMax: 170 },
-};
-
-function gridToLatLng(grid: [number, number], gccId: string): [number, number] {
-  const bounds = GCC_BOUNDS[gccId] || GCC_BOUNDS.INDOPACOM;
-  const lat = bounds.latMin + (grid[1] / 100) * (bounds.latMax - bounds.latMin);
-  const lng = bounds.lngMin + (grid[0] / 100) * (bounds.lngMax - bounds.lngMin);
-  return [lat, lng];
-}
+// Threat-entity positions come from lib/threat-geo.ts, which resolves the
+// entity's stated location to a coarse real-world centroid or declines to
+// place it. The old grid→AOR-bounds projection is gone: it turned an array
+// index into a coordinate.
 
 // Narrative zone positions (hardcoded per GCC for visual fidelity)
 const GCC_NARRATIVE_POSITIONS: Record<string, Array<[number, number]>> = {
@@ -115,16 +106,23 @@ export default function TacticalMap({ entities, narratives, cables, flights, sit
   const narrativeThreads = narratives ?? storeNarratives;
   const gcc = GCC_CONFIGS[activeGCC];
 
+  // Only entities whose stated location names a real place get a marker.
+  // Anything non-physical ("Cyberspace", "PRC-directed — global social media")
+  // is dropped here and listed in the overlay instead: a coordinate on this map
+  // reads as a locational claim, so it has to be one the data supports.
   const threatMarkers = useMemo<ThreatMarkerData[]>(() =>
-    threatEntities.map((te) => {
-      // Prefer explicit coordinates (multi-CCMD "ALL" scope precomputes them);
-      // otherwise map the normalized grid into the active GCC's bounds.
-      const explicit = te as unknown as { lat?: number; lng?: number };
-      const [lat, lng] = typeof explicit.lat === "number" && typeof explicit.lng === "number"
-        ? [explicit.lat, explicit.lng]
-        : gridToLatLng(te.grid, activeGCC);
-      return {
+    threatEntities.flatMap((te) => {
+      // Prefer explicit coordinates (multi-CCMD "ALL" scope precomputes them).
+      const explicit = te as unknown as { lat?: number; lng?: number; _place?: string; _precision?: GeoPrecision };
+      const resolved = typeof explicit.lat === "number" && typeof explicit.lng === "number"
+        ? { lat: explicit.lat, lng: explicit.lng, place: explicit._place ?? te.location, precision: explicit._precision ?? ("COUNTRY" as GeoPrecision) }
+        : resolveThreatLocation(te.location);
+      if (!resolved) return [];
+      const { lat, lng } = resolved;
+      return [{
         lat, lng,
+        place: resolved.place,
+        precision: resolved.precision,
         designation: te.designation,
         sourceUrl: te.sourceUrl,
         sourceLabel: te.sourceLabel,
@@ -133,8 +131,10 @@ export default function TacticalMap({ entities, narratives, cables, flights, sit
         threat: te.threat,
         confidence: te.confidence,
         capabilities: te.capabilities,
-      };
-    }), [threatEntities, activeGCC]);
+      }];
+      // No activeGCC dependency: positions now come from the entity's own
+      // location string, not from the active AOR's bounding box.
+    }), [threatEntities]);
 
   const narrativeZones = useMemo<NarrativeZoneData[]>(() => {
     const positions = GCC_NARRATIVE_POSITIONS[activeGCC] || GCC_NARRATIVE_POSITIONS.INDOPACOM;
@@ -278,10 +278,12 @@ export default function TacticalMap({ entities, narratives, cables, flights, sit
                 <polygon points="18,4 32,18 18,32 4,18" fill="${color}" fill-opacity="0.85" stroke="${color}" stroke-width="1"/>
                 <!-- Center dot -->
                 <circle cx="18" cy="18" r="3" fill="#000" opacity="0.8"/>
-                <!-- Threat type indicator: crosshair for STATE, shield for PROXY -->
+                <!-- Actor-type glyph: square for STATE, ring for PROXY/other.
+                     Deliberately NOT a crosshair — these are coarse locality
+                     associations, and reticle iconography reads as a fixed
+                     target on a tactical basemap. -->
                 ${te.type === "STATE"
-                  ? `<line x1="18" y1="10" x2="18" y2="26" stroke="#000" stroke-width="1.5" opacity="0.7"/>
-                     <line x1="10" y1="18" x2="26" y2="18" stroke="#000" stroke-width="1.5" opacity="0.7"/>`
+                  ? `<rect x="13" y="13" width="10" height="10" fill="none" stroke="#000" stroke-width="1.5" opacity="0.7"/>`
                   : `<circle cx="18" cy="18" r="5" fill="none" stroke="#000" stroke-width="1.5" opacity="0.7"/>`
                 }
               </svg>
@@ -304,6 +306,8 @@ export default function TacticalMap({ entities, narratives, cables, flights, sit
             <div style="color:#94a3b8;margin-bottom:4px">TYPE: <span style="color:#e2e8f0">${te.type}</span></div>
             <div style="color:#94a3b8;margin-bottom:4px">THREAT: <span style="color:${color};font-weight:bold">${te.threat}</span></div>
             <div style="color:#94a3b8;margin-bottom:4px">CONFIDENCE: <span style="color:#00d4ff">${te.confidence}%</span></div>
+            <div style="color:#94a3b8;margin-bottom:4px">POSITION: <span style="color:#e2e8f0">${te.place}</span></div>
+            <div style="color:#f59e0b;font-size:9px;margin-bottom:6px;line-height:1.3">⚑ ${precisionNote(te.precision)} — locality association derived from the reported location, not an observed position</div>
             <div style="color:#94a3b8;margin-bottom:6px">ACTIVITY:</div>
             <div style="color:#e2e8f0;font-size:10px;margin-bottom:6px;line-height:1.4">${te.activity}</div>
             <div style="color:#94a3b8;margin-bottom:3px">CAPABILITIES:</div>
@@ -317,9 +321,14 @@ export default function TacticalMap({ entities, narratives, cables, flights, sit
           maxWidth: 260,
         });
 
-        // AoI circle around threat entity
+        // Uncertainty ring, sized by how coarse the location resolution is —
+        // NOT by threat level. The centre is a gazetteer centroid, so the ring
+        // says "somewhere in here", which is the only spatial claim available.
         const aoiCircle = L.circle([te.lat, te.lng], {
-          radius: te.threat === "CRITICAL" ? 300000 : te.threat === "HIGH" ? 200000 : 120000,
+          radius: te.precision === "CITY" ? 60000
+            : te.precision === "REGION" ? 250000
+            : te.precision === "MARITIME" ? 400000
+            : 700000,
           color: color,
           fillColor: color,
           fillOpacity: 0.04,

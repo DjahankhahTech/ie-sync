@@ -165,13 +165,13 @@ export function IEOverlay() {
                 <th className="text-left px-4 py-2">THREAT</th>
                 <th className="text-left px-4 py-2">CONF%</th>
                 <th className="text-left px-4 py-2">CAPABILITIES</th>
-                <th className="text-left px-4 py-2">LAST SEEN</th>
+                <th className="text-left px-4 py-2" title="When the assessment that produced this entity was generated. Nothing in this pipeline observes these entities, so this is a report time, not a sighting.">REPORTED</th>
                 <th className="text-left px-4 py-2">SOURCE</th>
               </tr>
             </thead>
             <tbody>
               {threatsWithLayer.map((entity) => {
-                const layerColor = entity._layer === "PHYSICAL" ? "#10b981" : entity._layer === "TECHNICAL" ? "#00d4ff" : "#f59e0b";
+                const layerColor = entity._layer === "PHYSICAL" ? "#10b981" : entity._layer === "TECHNICAL" ? "#00d4ff" : entity._layer === "UNKNOWN" ? "#64748b" : "#f59e0b";
                 return (
                 <tr
                   key={entity.id}
@@ -217,7 +217,7 @@ export function IEOverlay() {
                     {entity.capabilities.join(" / ")}
                   </td>
                   <td className="px-4 py-2.5 text-[#475569] text-[10px]">
-                    {new Date(entity.lastSeen).toISOString().replace("T", " ").substring(0, 16)}Z
+                    {new Date(entity.reportedAt).toISOString().replace("T", " ").substring(0, 16)}Z
                   </td>
                   <td className="px-4 py-2.5">
                     <SourceLinkBadge url={entity.sourceUrl} label={entity.sourceLabel} />
