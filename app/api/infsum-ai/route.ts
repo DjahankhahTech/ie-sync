@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
 import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
+import { deriveInfsumMetrics, recordSnapshot } from "@/lib/history-store";
 
 // AI-generated executive Daily Information Summary (INFSUM). Generated once per
 // ET-day and cached (Vercel Data Cache) so it does NOT regenerate on every page
@@ -121,6 +122,22 @@ export async function GET(request: NextRequest) {
   const gen = async () => {
     const r = await generate(gccId, origin);
     if (r.error) throw new Error(String(r.error));
+    // Append to the immutable history on every fresh generation — this closure
+    // runs only on a cache miss or `?force=1`, so a forced re-run cannot
+    // overwrite what was claimed earlier. Best-effort: recordSnapshot never throws.
+    await recordSnapshot({
+      gcc: gccId,
+      product: "infsum",
+      day: dayET,
+      slot,
+      model: typeof r.model === "string" ? r.model : null,
+      effort: aiEffort("infsum"),
+      payload: r,
+      ...deriveInfsumMetrics(
+        (r.summary ?? {}) as Parameters<typeof deriveInfsumMetrics>[0],
+        typeof r.sourceCount === "number" ? r.sourceCount : null
+      ),
+    });
     return r;
   };
   const cached = unstable_cache(gen, ["infsum-ai", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["infsum-ai", `infsum-ai-${gccId}`] });

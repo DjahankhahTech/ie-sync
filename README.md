@@ -74,6 +74,19 @@ Reach *share* is used rather than raw reach because the model emits reach as a
 best-estimate order of magnitude; the ratio is far more stable across runs than
 either absolute figure.
 
+All three cron-warmed products record. They measure different things, so the
+typed columns above are assessment-shaped and the other two write a `metrics`
+JSONB payload instead of zero-filling columns they do not measure:
+
+| Product | Recorded |
+|---|---|
+| `analyze` | typed columns above (charted) |
+| `sigman` | `overallExposure`, `posture`, item counts by risk level, `meanExposureScore` |
+| `infsum` | section volumes only — INFSUM is entirely prose, with no numeric judgement to trend |
+
+INFSUM's counts say how much the watch analyst had to report, not how severe it
+was, so they are archived and searchable but deliberately not charted.
+
 > The previous 30-day MOE chart was fabricated — `getHistoricalMoeData()` built it
 > from `Math.random()` around hardcoded per-GCC baselines and re-rolled it on every
 > render. It has been removed, along with a second unused `historicalMoeData`

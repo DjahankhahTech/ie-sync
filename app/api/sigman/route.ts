@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 import { AI_MODEL, aiEffort, cachedSystem } from "@/lib/ai-config";
 import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
+import { deriveSigmanMetrics, recordSnapshot } from "@/lib/history-store";
 
 // SIGMAN (Signature Management) OSINT scan. SIGMAN is about FRIENDLY-force
 // signature / OPSEC: what an adversary could learn about US & allied posture.
@@ -144,6 +145,22 @@ export async function GET(request: NextRequest) {
   const gen = async () => {
     const r = await runSigman(gccId, await fetchAORItems(gccId, origin));
     if (r.error) { const e = new Error(String(r.error)) as Error & { status?: number }; e.status = (r.status as number) ?? 502; throw e; }
+    // Append to the immutable history on every fresh generation — this closure
+    // runs only on a cache miss or `?force=1`, so a forced re-run cannot
+    // overwrite what was claimed earlier. Best-effort: recordSnapshot never throws.
+    await recordSnapshot({
+      gcc: gccId,
+      product: "sigman",
+      day: dayET,
+      slot,
+      model: typeof r.model === "string" ? r.model : null,
+      effort: aiEffort("sigman"),
+      payload: r,
+      ...deriveSigmanMetrics(
+        (r.assessment ?? {}) as Parameters<typeof deriveSigmanMetrics>[0],
+        typeof r.sourceCount === "number" ? r.sourceCount : null
+      ),
+    });
     return r;
   };
   try {

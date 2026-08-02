@@ -39,7 +39,19 @@ export interface SnapshotMetrics {
   sourceCount: number | null;
 }
 
-export interface SnapshotInput extends SnapshotMetrics {
+/**
+ * What a snapshot can carry. Every field is optional because the three products
+ * measure genuinely different things: the typed columns are assessment-shaped
+ * (narrative reach, sentiment, threat entities) and mean nothing for SIGMAN or
+ * INFSUM, which leave them null and populate `metrics` instead. Writing zeros
+ * into columns a product does not measure would read as data later.
+ */
+export interface SnapshotFacts extends Partial<SnapshotMetrics> {
+  /** Product-specific numbers that do not fit the assessment-shaped columns. */
+  metrics?: Record<string, unknown>;
+}
+
+export interface SnapshotInput extends SnapshotFacts {
   gcc: string;
   product: ProductKind;
   day: string;   // YYYY-MM-DD, ET
@@ -59,6 +71,8 @@ export interface SeriesPoint {
   adversarialThreads: number;
   totalThreads: number;
   threatEntities: number;
+  /** Product-specific numbers; {} for products that record none. */
+  metrics: Record<string, unknown>;
 }
 
 // ── Connection (lazy) ────────────────────────────────────────────────────────
@@ -116,6 +130,13 @@ function ensureSchema(sql: Sql): Promise<void> {
       await sql`
         CREATE INDEX IF NOT EXISTS ie_snapshot_series_idx
           ON ie_snapshot (gcc, product, day, slot)
+      `;
+      // Added after the table shipped, so it must be an ALTER rather than part
+      // of the CREATE above — CREATE TABLE IF NOT EXISTS is a no-op against an
+      // existing table and would silently skip the new column.
+      await sql`
+        ALTER TABLE ie_snapshot
+          ADD COLUMN IF NOT EXISTS metrics JSONB NOT NULL DEFAULT '{}'::JSONB
       `;
     })().catch((err) => {
       // Let the next call retry rather than caching a failed migration.
@@ -188,6 +209,80 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+interface SigmanLike {
+  overallExposure?: number;
+  posture?: string;
+  items?: Array<{ riskLevel?: string; category?: string; exposureScore?: number }>;
+}
+
+/**
+ * SIGMAN measures friendly-force exposure in the open-source picture, which has
+ * no overlap with the assessment's narrative metrics — so everything lands in
+ * `metrics` and the assessment-shaped columns stay null.
+ *
+ * `posture` and `overallExposure` are the model's own aggregate judgement;
+ * the risk-level counts are computed here so a trend can be built without
+ * re-parsing every stored payload.
+ */
+export function deriveSigmanMetrics(sigman: SigmanLike, sourceCount: number | null): SnapshotFacts {
+  const items = Array.isArray(sigman?.items) ? sigman.items : [];
+  const byRisk = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  let scoreSum = 0;
+  let scored = 0;
+
+  for (const it of items) {
+    const risk = typeof it?.riskLevel === "string" ? it.riskLevel.toUpperCase() : "";
+    if (risk in byRisk) byRisk[risk as keyof typeof byRisk] += 1;
+    if (typeof it?.exposureScore === "number" && Number.isFinite(it.exposureScore)) {
+      scoreSum += it.exposureScore;
+      scored += 1;
+    }
+  }
+
+  return {
+    sourceCount,
+    metrics: {
+      overallExposure:
+        typeof sigman?.overallExposure === "number" && Number.isFinite(sigman.overallExposure)
+          ? sigman.overallExposure
+          : null,
+      posture: typeof sigman?.posture === "string" ? sigman.posture : null,
+      items: items.length,
+      critical: byRisk.CRITICAL,
+      high: byRisk.HIGH,
+      medium: byRisk.MEDIUM,
+      low: byRisk.LOW,
+      meanExposureScore: scored > 0 ? round1(scoreSum / scored) : null,
+    },
+  };
+}
+
+interface InfsumLike {
+  keyDevelopments?: unknown[];
+  ioThreatActivity?: unknown[];
+  narrativeTrends?: unknown[];
+  watchItems?: unknown[];
+}
+
+/**
+ * INFSUM is entirely prose — there is no numeric judgement in it to trend. The
+ * only honest quantities are section volumes, which say how much the watch
+ * analyst had to report, not how severe it was. Recorded so the full payload is
+ * archived and searchable; not charted, because section counts are not a signal.
+ */
+export function deriveInfsumMetrics(infsum: InfsumLike, sourceCount: number | null): SnapshotFacts {
+  const len = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  return {
+    sourceCount,
+    metrics: {
+      keyDevelopments: len(infsum?.keyDevelopments),
+      ioThreatActivity: len(infsum?.ioThreatActivity),
+      narrativeTrends: len(infsum?.narrativeTrends),
+      watchItems: len(infsum?.watchItems),
+    },
+  };
+}
+
 // ── Write ────────────────────────────────────────────────────────────────────
 
 /**
@@ -207,12 +302,13 @@ export async function recordSnapshot(input: SnapshotInput): Promise<boolean> {
       INSERT INTO ie_snapshot (
         gcc, product, day, slot, model, effort, source_count, ie_condition,
         adversarial_reach_share, mean_sentiment, adversarial_threads,
-        total_threads, threat_entities, payload
+        total_threads, threat_entities, payload, metrics
       ) VALUES (
         ${input.gcc}, ${input.product}, ${input.day}, ${input.slot},
-        ${input.model}, ${input.effort}, ${input.sourceCount}, ${input.ieCondition},
-        ${input.adversarialReachShare}, ${input.meanSentiment}, ${input.adversarialThreads},
-        ${input.totalThreads}, ${input.threatEntities}, ${JSON.stringify(input.payload)}
+        ${input.model}, ${input.effort}, ${input.sourceCount ?? null}, ${input.ieCondition ?? null},
+        ${input.adversarialReachShare ?? null}, ${input.meanSentiment ?? null}, ${input.adversarialThreads ?? 0},
+        ${input.totalThreads ?? 0}, ${input.threatEntities ?? 0}, ${JSON.stringify(input.payload)},
+        ${JSON.stringify(input.metrics ?? {})}
       )
       ON CONFLICT (gcc, product, day, slot) DO NOTHING
       RETURNING id
@@ -260,7 +356,8 @@ export async function readSeries(opts: {
         mean_sentiment,
         adversarial_threads,
         total_threads,
-        threat_entities
+        threat_entities,
+        metrics
       FROM ie_snapshot
       WHERE gcc = ${opts.gcc}
         AND product = ${product}
@@ -278,6 +375,7 @@ export async function readSeries(opts: {
       adversarialThreads: Number(r.adversarial_threads),
       totalThreads: Number(r.total_threads),
       threatEntities: Number(r.threat_entities),
+      metrics: (r.metrics ?? {}) as Record<string, unknown>,
     }));
   } catch (err) {
     console.error("[history] series read failed", {
