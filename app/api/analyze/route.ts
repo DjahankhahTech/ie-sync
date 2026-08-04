@@ -55,9 +55,9 @@ const ASSESSMENT_SCHEMA = {
           location: { type: "string" },
           activity: { type: "string" },
           threat: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
-          // Rendered as a percentage downstream, so bound it here rather than
-          // trusting the model to stay in range (also clamped in the store).
-          confidence: { type: "integer", minimum: 0, maximum: 100 },
+          // 0-100 percentage. The structured-output API rejects minimum/maximum
+          // on integers, so the range is enforced by clampConfidence in the store.
+          confidence: { type: "integer" },
           capabilities: { type: "array", items: { type: "string" } },
           sourceLabel: { type: "string" },
           sourceUrl: { type: "string" },
@@ -122,7 +122,7 @@ HARD RULES — these are safety and integrity constraints:
 2. Do NOT fabricate classified intelligence: no fake SIGINT/HUMINT intercepts, no invented unit locations, no specific casualty/force figures unless they appear in the OSINT.
 3. For threat entities, cite a REAL, verifiable public source (the provided OSINT link, or a well-known public reference such as MITRE ATT&CK, CISA, DOJ, a named think-tank/report). Put the publisher name in sourceLabel and a real URL in sourceUrl. If you cannot attribute, omit the entity.
 4. Classification of this product is UNCLASSIFIED // OSINT. It is an AI-generated DRAFT that REQUIRES human analyst validation before any operational use.
-5. Be calibrated. Use confidence levels honestly. Prefer "UNCERTAIN" IE condition unless the OSINT clearly supports "HOSTILE" or "PERMISSIVE".
+5. Be calibrated. Use confidence levels honestly (confidence is an integer percentage from 0 to 100). Prefer "UNCERTAIN" IE condition unless the OSINT clearly supports "HOSTILE" or "PERMISSIVE".
 
 Produce: an IE Running Estimate (situation, mission, CDR objective, adversary/friendly capabilities, assumptions, limitations, risks, recommendations), the AO threat-entity picture, the hostile-narrative board (numeric reach/velocity/sentiment are best-estimate ranges — keep them plausible, not precise), and 2-3 COAs that target the specific threats/narratives you identified. Tie COA tasks to the named threat entities and narratives.
 
