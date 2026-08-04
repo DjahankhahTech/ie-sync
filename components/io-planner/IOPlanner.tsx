@@ -269,8 +269,8 @@ export function IOPlanner() {
           {/* Available forces */}
           <div className="tactical-card p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-[#00d4ff] text-xs font-bold tracking-widest">AVAILABLE FORCES — RANGE OF INFORMATION OPERATIONS</div>
-              <div className="text-[10px] text-[#475569] font-mono">{availableCount} IRC(s) available</div>
+              <div className="text-[#00d4ff] text-xs font-bold tracking-widest">AVAILABLE FORCES — WHAT CAPABILITIES DO YOU ACTUALLY HAVE?</div>
+              <div className="text-[10px] text-[#475569] font-mono">{availableCount} capabilit{availableCount === 1 ? "y" : "ies"} available</div>
             </div>
             <div className="text-[10px] text-[#475569]">Check each information-related capability you have and assign the specific unit/platform. The planner tasks only what you mark available.</div>
             <div className="space-y-1.5">
@@ -319,7 +319,7 @@ export function IOPlanner() {
         <ProductsView result={result} onBack={() => setTab("builder")} />
       )}
 
-      <GlossaryPanel module="annex" />
+      <GlossaryPanel module="coa" />
 
       <style jsx>{`
         :global(.planner-input) {

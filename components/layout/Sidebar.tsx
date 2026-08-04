@@ -10,7 +10,7 @@ const modules: { id: string; label: string; hint: string }[] = [
   { id: "ie-map", label: "Map", hint: "Layers & locations" },
   { id: "sensor-fusion", label: "Live OSINT", hint: "Open-source feeds" },
   { id: "running-estimate", label: "Adversary Estimate", hint: "What they may do next" },
-  { id: "io-planner", label: "Plan & ITCO", hint: "COA, Annex I, ITCO" },
+  { id: "io-planner", label: "Plan the Response", hint: "Build the COA, annex, and tasking order" },
   { id: "sigman", label: "Signatures", hint: "Friendly exposure" },
   { id: "doctrine", label: "Public Doctrine", hint: "Open research links" },
   { id: "s-and-t", label: "S&T", hint: "Research resources" },

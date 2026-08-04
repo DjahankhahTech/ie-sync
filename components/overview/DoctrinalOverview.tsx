@@ -21,7 +21,7 @@ const PATHS = [
     step: "3",
     title: "Plan the response",
     module: "io-planner",
-    desc: "Turn the estimate into a planning worksheet, COA, Annex I (Information), and ITCO draft for staff coordination.",
+    desc: "Turn the estimate into a course of action (COA), the information annex to the order (Annex I), and a draft tasking order (ITCO) for staff coordination.",
   },
   {
     step: "4",
@@ -70,7 +70,7 @@ export function DoctrinalOverview() {
             requires human validation before command use.
           </p>
         </div>
-        <span className="trl-badge">TRL 4 · Experimentation</span>
+        <span className="trl-badge" title="Technology Readiness Level 4 — a working prototype under evaluation, not a fielded system">Prototype · TRL 4</span>
       </header>
 
       {/* Theater status */}
@@ -96,7 +96,7 @@ export function DoctrinalOverview() {
             {feedsReady ? liveFeeds.length : "—"}
             {ioCount > 0 && (
               <span className="text-[var(--danger)] font-semibold text-[13px] ml-1.5">
-                ({ioCount} IO-relevant)
+                ({ioCount} relevant to information ops)
               </span>
             )}
           </div>

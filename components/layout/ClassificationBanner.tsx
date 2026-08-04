@@ -7,7 +7,7 @@ interface Props {
 
 export function ClassificationBanner({
   level = "UNCLASSIFIED//OSINT",
-  note = "Open-source only · Analytic drafts require human validation · Not for operational decision alone",
+  note = "Open-source only · AI drafts must be checked by a human analyst · Do not base operational decisions on this tool alone",
 }: Props) {
   return (
     <div className="classification-banner classification-u flex flex-col sm:flex-row items-center justify-center gap-x-3 gap-y-0.5 px-3">

@@ -180,8 +180,8 @@ export function RunningEstimateModule() {
           <div>
             <h2 className="panel-title">Generate from live OSINT</h2>
             <p className="text-[14px] text-muted m-0 mt-1 max-w-2xl">
-              Drafts the IE estimate, threat picture, hostile narratives, and COA options from
-              open sources. Cached daily; refresh pulls the latest articles.
+              Drafts the estimate, threat picture, hostile narratives, and course-of-action (COA)
+              options from open sources. Cached daily; refresh pulls the latest articles.
             </p>
           </div>
           <button
@@ -212,7 +212,7 @@ export function RunningEstimateModule() {
           <div>
             <div className="label">{runningEstimate.classification}</div>
             <div className="text-[1.15rem] font-bold mt-1">
-              Running estimate — information environment
+              Adversary estimate — information environment
             </div>
             <div className="text-muted text-[15px] mt-0.5">
               {runningEstimate.operationName || "No operation name yet — generate an assessment"}
@@ -233,7 +233,7 @@ export function RunningEstimateModule() {
         </div>
 
         <div className="mt-3 p-3 bg-[#070d1a] border border-[#1e3a5f] rounded">
-          <div className="text-[#475569] text-[10px] tracking-wider mb-1">CDRU OBJECTIVE</div>
+          <div className="text-[#475569] text-[10px] tracking-wider mb-1">COMMANDER&apos;S DESIRED OUTCOME IN THE IE</div>
           <div className="text-[#00d4ff] text-xs leading-relaxed">{runningEstimate.cdruObjective}</div>
         </div>
 
@@ -260,13 +260,13 @@ export function RunningEstimateModule() {
             onClick={saveVersion}
             className="px-2 py-0.5 text-[9px] border border-[#00d4ff] text-[#00d4ff] rounded hover:bg-[#00d4ff15] font-mono font-bold whitespace-nowrap"
           >
-            SAVE {currentVersionLabel}
+            SAVE SNAPSHOT {currentVersionLabel}
           </button>
           <button
             onClick={() => setShowVersions(!showVersions)}
             className="px-2 py-0.5 text-[9px] border border-[#1e3a5f] text-[#475569] rounded hover:border-[#334155] font-mono"
           >
-            HISTORY ({versions.length}) {showVersions ? "▲" : "▼"}
+            PAST VERSIONS ({versions.length}) {showVersions ? "▲" : "▼"}
           </button>
         </div>
       </div>
@@ -274,7 +274,7 @@ export function RunningEstimateModule() {
       {/* ── Version History Panel ────────────────────────────────────── */}
       {showVersions && (
         <div className="tactical-card p-4">
-          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">RUNNING ESTIMATE VERSION HISTORY</div>
+          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">ESTIMATE VERSION HISTORY</div>
           <div className="space-y-2">
             {[...versions].reverse().map((ver, idx) => {
               const prev = [...versions].reverse()[idx + 1] ?? null;
@@ -304,7 +304,7 @@ export function RunningEstimateModule() {
                       onClick={() => setShowDiff(showDiff === ver.version ? null : ver.version)}
                       className="text-[9px] text-[#475569] border border-[#1e3a5f] px-1.5 py-0.5 rounded hover:border-[#334155] font-mono"
                     >
-                      {showDiff === ver.version ? "HIDE DIFF" : "DIFF ▼"}
+                      {showDiff === ver.version ? "HIDE CHANGES" : "WHAT CHANGED ▼"}
                     </button>
                   </div>
                   <div className="text-[#94a3b8] text-[9px] mt-1 font-mono italic">{ver.changeNote}</div>
@@ -314,7 +314,7 @@ export function RunningEstimateModule() {
                     <div className="mt-2 space-y-1.5">
                       {ieChanged && (
                         <div className="text-[9px] font-mono p-1.5 bg-[#f59e0b08] border border-[#f59e0b30] rounded">
-                          <span className="text-[#f59e0b]">Δ IE CONDITION: </span>
+                          <span className="text-[#f59e0b]">IE CONDITION CHANGED: </span>
                           <span className="text-[#ef4444]">{prev?.ieCondition ?? "—"}</span>
                           <span className="text-[#475569]"> → </span>
                           <span className="text-[#10b981]">{ver.ieCondition}</span>
@@ -399,7 +399,7 @@ export function RunningEstimateModule() {
               <div className="text-[10px] text-[#64748b] leading-relaxed max-w-md">
                 {historyEnabled
                   ? "This chart plots only assessments this system actually generated and stored. The archive fills as the 0600/1200/1800 ET runs execute — expect a readable trend after roughly three days."
-                  : "History storage is not provisioned (DATABASE_URL is unset), so no assessment is being retained. Until it is, every generated product is discarded when its cache expires."}
+                  : "This system isn't set up to save past assessments yet, so no trend can be shown. Ask the system admin to enable history storage."}
               </div>
               <div className="text-[9px] text-[#475569] mt-1">
                 No placeholder data is shown here by design.

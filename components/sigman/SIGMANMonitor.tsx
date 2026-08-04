@@ -46,9 +46,9 @@ export function SIGMANMonitor() {
       <div className="tactical-card p-4 border border-[#0891b2]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-[#00d4ff] text-sm font-black tracking-widest">SIGMAN MONITOR — auto-posted 0600 / 1200 / 1800 ET</div>
+            <div className="text-[#00d4ff] text-sm font-black tracking-widest">SIGNATURE MANAGEMENT (SIGMAN) — WHAT WE&apos;RE GIVING AWAY</div>
             <div className="text-[#475569] text-xs">
-              What the open-source picture reveals about friendly (US/allied) force signatures an adversary could exploit. Powered by Claude (Opus 4.8) over the live OSINT feed. Cached three times daily; refresh for the latest sources.
+              A signature is anything observable — radio emissions, posted photos, ship movements, patterns — that tells an adversary where friendly (US/allied) forces are or what they&apos;re about to do. This scan checks open-source news for those giveaways. Powered by Claude over the live OSINT feed. Auto-updated 0600 / 1200 / 1800 ET; refresh for the latest sources.
             </div>
           </div>
           <button
@@ -72,7 +72,7 @@ export function SIGMANMonitor() {
         <div className="tactical-card p-8 text-center">
           <div className="text-[#1e3a5f] text-4xl mb-3">📡</div>
           <div className="text-[#475569] text-sm mb-1">No signature scan run yet</div>
-          <div className="text-[#334155] text-xs max-w-md mx-auto">Click &quot;Scan OSINT for Exposure&quot; to assess what current open-source reporting reveals about friendly-force posture, movements, installations, and patterns in this AOR.</div>
+          <div className="text-[#334155] text-xs max-w-md mx-auto">Press &quot;Refresh (latest sources)&quot; above to scan today&apos;s open-source news for anything that reveals friendly-force locations, movements, installations, or patterns in this theater.</div>
         </div>
       )}
 
@@ -125,7 +125,7 @@ export function SIGMANMonitor() {
         </>
       )}
 
-      <GlossaryPanel module="annex" />
+      <GlossaryPanel module="sigman" />
     </div>
   );
 }

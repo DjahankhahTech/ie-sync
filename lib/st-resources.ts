@@ -17,23 +17,22 @@ export const JOURNALS: STLink[] = [
 
 export const RESEARCH_ORGS: STLink[] = [
   { name: "RAND — Information Operations", url: "https://www.rand.org/topics/information-operations.html", note: "Reports & studies on IO, disinformation, and influence." },
-  { name: "Stanford Internet Observatory", url: "https://cyber.fsi.stanford.edu/io", note: "Empirical research on online influence operations." },
+  { name: "Stanford Trust & Safety Research (successor to the Internet Observatory)", url: "https://tip.fsi.stanford.edu/", note: "Empirical research on online influence operations and platform abuse." },
   { name: "DFRLab (Atlantic Council)", url: "https://dfrlab.org/", note: "Open-source investigations into disinformation campaigns." },
   { name: "NATO StratCom COE", url: "https://stratcomcoe.org/", note: "NATO Centre of Excellence for Strategic Communications." },
   { name: "EU DisinfoLab", url: "https://www.disinfo.eu/", note: "FIMI/disinformation research (Doppelganger, etc.)." },
   { name: "ASPI — International Cyber Policy Centre", url: "https://www.aspi.org.au/program/international-cyber-policy-centre", note: "Indo-Pacific influence & cyber research." },
   { name: "CSIS", url: "https://www.csis.org/", note: "Strategy & technology programs; PLA info forces, gray-zone." },
-  { name: "Carnegie — Partnership for Countering Influence Operations", url: "https://carnegieendowment.org/specialprojects/counteringinfluenceoperations", note: "Cross-platform influence-operations research." },
+  { name: "Carnegie — Information Environment Project", url: "https://carnegieendowment.org/projects/information-environment-project", note: "Cross-platform influence-operations research (formerly the Partnership for Countering Influence Operations)." },
 ];
 
 export const TRAINING: STLink[] = [
   { name: "Joint Forces Staff College — Joint IO Planners Course (JIOPC)", url: "https://jfsc.ndu.edu/Academics/Joint-and-Combined-Warfighting-School/", note: "Joint-level qualification course for IO planners (NDU/JFSC)." },
   { name: "NDU — College of Information & Cyberspace (CIC)", url: "https://cic.ndu.edu/", note: "Graduate-level information strategy, cyber, and IO PME." },
-  { name: "Naval Postgraduate School — Information Warfare / Strategy", url: "https://nps.edu/web/issg", note: "Master's curricula in information strategy & political warfare." },
-  { name: "1st IO Command — Army IO Qualification (FA30) training", url: "https://www.1stiocmd.army.mil/", note: "Army information-operations field-support & IO officer training." },
+  { name: "NPS — DoD Information Strategy Research Center (ISRC)", url: "https://nps.edu/web/isrc", note: "Naval Postgraduate School research & graduate education in information strategy, political warfare, and OIE." },
   { name: "Marine Corps Information Operations Center (MCIOC)", url: "https://www.marforcyber.marines.mil/", note: "USMC IO/IRC integration training & support." },
   { name: "DoD Cyber Exchange / FedVTE", url: "https://public.cyber.mil/", note: "Free DoD cyber & influence-related training modules." },
-  { name: "NATO StratCom COE — courses & training", url: "https://stratcomcoe.org/training", note: "Strategic-communications and counter-FIMI professional courses." },
+  { name: "NATO StratCom COE — events, courses & training", url: "https://stratcomcoe.org/events", note: "Strategic-communications and counter-FIMI professional courses." },
   { name: "DISA University / DISA Training", url: "https://www.disa.mil/training", note: "Information-systems & C2 enterprise technology training." },
 ];
 
