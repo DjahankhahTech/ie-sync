@@ -115,11 +115,12 @@ export function PMESIIMap() {
       <div className="px-4 py-3 border-b border-[#1e3a5f]">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">
-              PMESII-PT OPERATIONAL ENVIRONMENT MAP
+            <div className="text-[15px] font-bold text-[var(--foreground)]">
+              Environment map (PMESII)
             </div>
-            <div className="text-[#475569] text-[9px] font-mono mt-0.5">
-              JP 3-13 / MCDP 3-32 // {activeGCC} AOR // {totalIndicators} INDICATORS TRACKED
+            <div className="text-[13px] text-muted mt-0.5">
+              How political, military, economic, social, information, and infrastructure
+              factors shape the IE · {activeGCC} · {totalIndicators} indicators
             </div>
           </div>
           <div className="flex items-center gap-3">

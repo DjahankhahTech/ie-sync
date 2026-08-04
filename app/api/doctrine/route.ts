@@ -1,64 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  searchLibrary,
+  publicSources,
+  isPublicLinkable,
   componentLabel,
   LIBRARY_COMPONENTS,
   LIBRARY_COUNTS,
-  type LibraryAccess,
+  LIBRARY_SOURCES,
 } from "@/lib/military-library";
 
-// Doctrine / research library browser over the catalogued military-library
-// corpus. Metadata only — the PDFs live on the offline library drive, so
-// entries carry a link when the catalog holds a public URL and are
-// reference-only when it does not.
+// Doctrine API — PUBLIC LINKS ONLY.
+// Offline / local-only / stub catalog entries are never returned.
 //
-//   /api/doctrine                                  → components + counts
-//   /api/doctrine?q=ukraine&component=...&access=public&limit=50
-//
-// Must stay dynamic: the handler reads searchParams, and a prerendered
-// (force-static) route would render once with empty params and silently ignore
-// every filter. Filtering is an in-memory pass over a committed build artifact,
-// so there is no I/O cost to being dynamic.
+//   /api/doctrine
+//   /api/doctrine?q=ukraine&component=...&limit=50
 
 export const dynamic = "force-dynamic";
-
-const ACCESS_VALUES: LibraryAccess[] = ["public", "local-only", "stub"];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const q = searchParams.get("q") ?? undefined;
   const component = searchParams.get("component") ?? undefined;
-  const accessParam = searchParams.get("access");
   const limitParam = searchParams.get("limit");
 
   if (component && !LIBRARY_COMPONENTS.some((c) => c.id === component)) {
     return NextResponse.json({ error: `Unknown component "${component}"` }, { status: 400 });
   }
-  if (accessParam && !ACCESS_VALUES.includes(accessParam as LibraryAccess)) {
-    return NextResponse.json(
-      { error: `Invalid access filter — expected one of ${ACCESS_VALUES.join(", ")}` },
-      { status: 400 }
-    );
-  }
 
   const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
   const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 200;
 
-  const sources = searchLibrary({
-    q,
-    component,
-    access: (accessParam as LibraryAccess | null) ?? undefined,
-    limit,
-  });
+  const sources = publicSources({ q, component, limit });
+  const publicCount = LIBRARY_SOURCES.filter(isPublicLinkable).length;
+
+  const components = LIBRARY_COMPONENTS
+    .map((c) => {
+      const n = LIBRARY_SOURCES.filter(
+        (s) => s.component === c.id && isPublicLinkable(s)
+      ).length;
+      return { ...c, label: componentLabel(c.id), public: n, total: n };
+    })
+    .filter((c) => c.public > 0);
 
   return NextResponse.json({
     library: "military-library",
     classification: "UNCLASSIFIED // PUBLIC RESEARCH LITERATURE",
     provenance:
-      "Catalogued public research corpus. Presence in the library is not endorsement, validation, or evidence of operational effectiveness. Documents without a public URL are held offline and are cited by reference only.",
-    counts: LIBRARY_COUNTS,
-    components: LIBRARY_COMPONENTS.map((c) => ({ ...c, label: componentLabel(c.id) })),
+      "Public documents with verifiable http(s) URLs only. Offline catalog holdings are not listed. Presence is not endorsement or operational validation.",
+    policy: "public-links-only",
+    counts: {
+      ...LIBRARY_COUNTS,
+      public: publicCount,
+      sources: publicCount,
+      localOnly: 0,
+      stub: 0,
+    },
+    components,
     returned: sources.length,
     sources,
   });

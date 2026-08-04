@@ -170,14 +170,17 @@ export function IOPlanner() {
   const availableCount = forces.filter((f) => f.available).length;
 
   return (
-    <div className="p-4 overflow-y-auto h-full space-y-4">
-      {/* Header */}
-      <div>
-        <div className="text-[#00d4ff] text-sm font-black tracking-widest">IO PLANNER</div>
-        <div className="text-[#475569] text-xs font-mono">
-          Marine / joint OIE planning worksheet → draft COA, Annex I (Information), and ITCO (MCWP 8-10 ITCC). AI fills from OSINT, available IRCs, and the AO threat picture — human review required before command use.
+    <div className="page-scroll page-scroll-wide">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Plan the response</h1>
+          <p className="page-subtitle">
+            Worksheet → draft COA, Annex I (Information), and ITCO. Built from your inputs,
+            available information-related capabilities, and the AO threat picture. Human
+            review required before command use.
+          </p>
         </div>
-      </div>
+      </header>
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-[#1e3a5f]">

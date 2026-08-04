@@ -86,11 +86,11 @@ export function DailyINFSUM() {
             {expanded ? "▼" : "▶"}
           </button>
           <div>
-            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">
-              DAILY INFORMATION SUMMARY — {gcc.abbr}
+            <div className="text-[15px] font-bold">
+              Daily information summary — {gcc.abbr}
             </div>
-            <div className="text-[#475569] text-[9px] font-mono mt-0.5">
-              {infsum.classification} // DTG: {infsum.dtg} // PERIOD: {infsum.period}
+            <div className="text-[13px] text-muted mt-0.5">
+              {infsum.classification} · {infsum.dtg} · {infsum.period}
             </div>
           </div>
         </div>

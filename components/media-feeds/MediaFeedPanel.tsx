@@ -33,11 +33,11 @@ export function MediaFeedPanel() {
             {expanded ? "▼" : "▶"}
           </button>
           <div>
-            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">
-              IE MEDIA FEED — {gcc.abbr}
+            <div className="text-[15px] font-bold">
+              Video & image OSINT — {gcc.abbr}
             </div>
-            <div className="text-[#475569] text-[9px] font-mono mt-0.5">
-              VIDEO & IMAGE OSINT // {gcc.aor.toUpperCase()}
+            <div className="text-[13px] text-muted mt-0.5">
+              Public media related to the information environment · {gcc.aor}
             </div>
           </div>
         </div>

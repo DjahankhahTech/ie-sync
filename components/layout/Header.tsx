@@ -5,28 +5,43 @@ import { formatDTG } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 
-const moduleLabels: Record<string, string> = {
-  home: "MISSION BRIEF — INFORMATION OFFICER WORKFLOW",
-  cop: "IE OVERLAY — COMMON OPERATIONAL PICTURE",
-  "ie-map": "IE TACTICAL OVERLAY — OIE INFORMATION LAYERS",
-  "running-estimate": "RUNNING ESTIMATE — LIVE IE ASSESSMENT",
-  "sensor-fusion": "LIVE FEEDS — OSINT AGGREGATION & TRIAGE",
-  "io-planner": "IO PLANNER — COA · ANNEX I · ITCO",
-  sigman: "SIGNATURE MANAGEMENT MONITOR",
-  "s-and-t": "S&T RESOURCES — IO OFFICER LIBRARY",
-  doctrine: "DOCTRINE LIBRARY — JP / MCDP / MCWP CORPUS",
-};
-
-const moduleSubcopy: Record<string, string> = {
-  home: "MCWP 8-10 // ITCC cycle // MAGTF IE Ops decision support",
-  cop: "PMESII-PT picture, INFSUM, threat entities, media OSINT",
-  "ie-map": "Physical / Informational / Cognitive layer overlay",
-  "running-estimate": "JP 3-13 Ch. IV running estimate with MOE/MOP",
-  "sensor-fusion": "Open-source feed triage for the watch desk",
-  "io-planner": "Worksheet → COA, Annex I (Information), ITCO draft",
-  sigman: "Open-source OPSEC / signature exposure scan",
-  "s-and-t": "Journals, research orgs, and training for OIE planners",
-  doctrine: "Cited corpus for assessments and plan products",
+const moduleMeta: Record<string, { title: string; blurb: string }> = {
+  home: {
+    title: "Home",
+    blurb: "How IE-SYNC captures the information environment and frames adversary action",
+  },
+  cop: {
+    title: "Information Environment",
+    blurb: "Open-source picture of the IE — themes, threats, and daily summary",
+  },
+  "ie-map": {
+    title: "Map",
+    blurb: "Physical, informational, and cognitive layers on the map",
+  },
+  "running-estimate": {
+    title: "Adversary Estimate",
+    blurb: "What the OSINT suggests adversaries may do next — draft for human review",
+  },
+  "sensor-fusion": {
+    title: "Live OSINT",
+    blurb: "Triage open-source reporting for the selected theater",
+  },
+  "io-planner": {
+    title: "Plan & ITCO",
+    blurb: "Turn the estimate into COA, Annex I, and ITCO drafts",
+  },
+  sigman: {
+    title: "Signature management",
+    blurb: "Where friendly activity may leak into open sources",
+  },
+  "s-and-t": {
+    title: "Science & technology",
+    blurb: "Journals and resources for information officers",
+  },
+  doctrine: {
+    title: "Public doctrine",
+    blurb: "Only research with a public web link",
+  },
 };
 
 export function Header() {
@@ -45,32 +60,30 @@ export function Header() {
   const [showGCCPicker, setShowGCCPicker] = useState(false);
   const unacked = alerts.filter((a) => !a.acknowledged);
   const gcc = GCC_CONFIGS[activeGCC];
+  const meta = moduleMeta[activeModule] ?? {
+    title: "IE-SYNC",
+    blurb: "Information environment decision support",
+  };
 
   const feedAgeMins = liveFeedsFetchedAt
     ? Math.floor((Date.now() - new Date(liveFeedsFetchedAt).getTime()) / 60000)
     : null;
   const feedStale = feedAgeMins !== null && feedAgeMins > 30;
-  const feedFreshnessLabel =
+  const feedLabel =
     feedAgeMins === null
-      ? "NO DATA"
+      ? "No feed yet"
       : feedAgeMins < 1
-        ? "< 1m ago"
+        ? "Just now"
         : feedAgeMins < 60
           ? `${feedAgeMins}m ago`
           : `${Math.floor(feedAgeMins / 60)}h ago`;
 
-  const ieConditionColor =
+  const ieColor =
     runningEstimate.ieCondition === "HOSTILE"
-      ? "#ef4444"
+      ? "var(--danger)"
       : runningEstimate.ieCondition === "UNCERTAIN"
-        ? "#f59e0b"
-        : "#10b981";
-  const ieConditionDotClass =
-    runningEstimate.ieCondition === "HOSTILE"
-      ? "danger"
-      : runningEstimate.ieCondition === "UNCERTAIN"
-        ? "warning"
-        : "active";
+        ? "var(--warning)"
+        : "var(--success)";
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentDTG(formatDTG()), 60000);
@@ -78,68 +91,50 @@ export function Header() {
   }, []);
 
   const severityColor: Record<string, string> = {
-    CRITICAL: "text-[#ef4444]",
-    HIGH: "text-[#f97316]",
-    MEDIUM: "text-[#f59e0b]",
-    LOW: "text-[#10b981]",
+    CRITICAL: "text-[var(--danger)]",
+    HIGH: "text-orange-400",
+    MEDIUM: "text-[var(--warning)]",
+    LOW: "text-[var(--success)]",
   };
 
   return (
-    <header className="relative z-[1100] bg-[#070d1a] border-b border-[#1e3a5f] px-4 py-2.5">
+    <header className="relative z-[1100] bg-[#0a1220]/80 backdrop-blur border-b border-[var(--border)] px-4 py-3">
       <div className="flex items-center justify-between gap-4">
-        {/* Left: module title */}
         <div className="min-w-0">
-          <div className="text-[#00d4ff] text-sm font-bold tracking-widest truncate">
-            {moduleLabels[activeModule] ?? "IE-SYNC"}
-          </div>
-          <div className="text-[#475569] text-xs font-mono mt-0.5 truncate">
-            {gcc.name} // {gcc.aor} //{" "}
-            {moduleSubcopy[activeModule] ?? "IO DECISION SUPPORT"}
-          </div>
+          <h1 className="text-[1.05rem] font-bold text-[var(--foreground)] tracking-tight truncate">
+            {meta.title}
+          </h1>
+          <p className="text-[13px] text-[var(--muted)] mt-0.5 truncate">
+            {gcc.abbr} · {meta.blurb}
+          </p>
         </div>
 
-        {/* Right controls */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {/* GCC Selector */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <div className="relative">
             <button
+              type="button"
               onClick={() => {
                 setShowGCCPicker(!showGCCPicker);
                 setShowAlerts(false);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 border rounded transition-colors hover:border-[#0891b2]"
-              style={{ borderColor: gcc.color, background: `${gcc.color}10` }}
+              className="flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-colors hover:border-[var(--accent-dim)]"
+              style={{ borderColor: gcc.color, background: `${gcc.color}12` }}
             >
               <span className="text-lg leading-none">{gcc.flag}</span>
-              <div className="text-left">
-                <div className="text-xs font-bold" style={{ color: gcc.color }}>
+              <div className="text-left hidden sm:block">
+                <div className="text-[13px] font-bold" style={{ color: gcc.color }}>
                   {gcc.abbr}
                 </div>
-                <div className="text-[9px] text-[#475569]">AOR / Theater</div>
+                <div className="text-[11px] text-[var(--muted)]">Theater</div>
               </div>
-              <svg
-                className="w-3 h-3 text-[#475569]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
             </button>
 
             {showGCCPicker && (
-              <div className="absolute right-0 top-10 w-72 bg-[#0f1829] border border-[#1e3a5f] rounded shadow-2xl z-50">
-                <div className="p-2 border-b border-[#1e3a5f]">
-                  <div className="text-[#00d4ff] text-[10px] font-bold tracking-wider px-1">
-                    SELECT THEATER / AOR
-                  </div>
-                  <div className="text-[#475569] text-[9px] px-1 mt-0.5">
-                    Filters OSINT feeds, PMESII map, and AI products
+              <div className="absolute right-0 top-11 w-72 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl z-50">
+                <div className="p-3 border-b border-[var(--border)]">
+                  <div className="text-[13px] font-semibold">Select theater</div>
+                  <div className="text-[12px] text-[var(--muted)] mt-0.5">
+                    Filters feeds, estimate, and speculation products
                   </div>
                 </div>
                 <div className="p-2 space-y-1 max-h-80 overflow-y-auto">
@@ -147,30 +142,24 @@ export function Header() {
                     ([id, cfg]) => (
                       <button
                         key={id}
+                        type="button"
                         onClick={() => {
                           setActiveGCC(id);
                           setShowGCCPicker(false);
                         }}
-                        className={`w-full flex items-center gap-3 p-2 rounded text-left transition-colors hover:bg-[#162035] ${
-                          activeGCC === id ? "bg-[#162035]" : ""
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left hover:bg-[var(--card-hover)] ${
+                          activeGCC === id ? "bg-[var(--card-hover)]" : ""
                         }`}
                       >
                         <span className="text-xl">{cfg.flag}</span>
-                        <div className="flex-1 min-w-0">
-                          <div
-                            className="text-xs font-bold"
-                            style={{ color: cfg.color }}
-                          >
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-bold" style={{ color: cfg.color }}>
                             {cfg.abbr}
                           </div>
-                          <div className="text-[#94a3b8] text-[10px] truncate">
-                            {cfg.name}
+                          <div className="text-[12px] text-[var(--muted)] truncate">
+                            {cfg.aor}
                           </div>
-                          <div className="text-[#475569] text-[9px]">{cfg.aor}</div>
                         </div>
-                        {activeGCC === id && (
-                          <span className="text-[#00d4ff] text-xs">✓</span>
-                        )}
                       </button>
                     )
                   )}
@@ -179,30 +168,22 @@ export function Header() {
             )}
           </div>
 
-          {/* DTG */}
-          <div className="text-right hidden sm:block">
-            <div className="text-[#00d4ff] text-xs font-mono tracking-widest">
-              {currentDTG}
-            </div>
-            <div className="text-[#475569] text-[10px]">ZULU</div>
+          <div className="text-right hidden md:block">
+            <div className="text-[13px] font-mono text-[var(--accent)]">{currentDTG}</div>
+            <div className="text-[11px] text-[var(--muted)]">Zulu</div>
           </div>
 
-          {/* Alert bell */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => {
                 setShowAlerts(!showAlerts);
                 setShowGCCPicker(false);
               }}
-              className="relative p-2 border border-[#1e3a5f] rounded hover:border-[#ef4444] transition-colors"
+              className="relative p-2 border border-[var(--border)] rounded-lg hover:border-[var(--danger)]"
               aria-label="Alerts"
             >
-              <svg
-                className="w-4 h-4 text-[#94a3b8]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg className="w-4 h-4 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -211,56 +192,51 @@ export function Header() {
                 />
               </svg>
               {unacked.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4444] rounded-full text-[10px] font-bold text-white flex items-center justify-center pulse-alert">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--danger)] rounded-full text-[10px] font-bold text-white flex items-center justify-center">
                   {unacked.length}
                 </span>
               )}
             </button>
 
             {showAlerts && (
-              <div className="absolute right-0 top-10 w-96 bg-[#0f1829] border border-[#1e3a5f] rounded shadow-2xl z-50 max-h-96 overflow-y-auto">
-                <div className="p-3 border-b border-[#1e3a5f] flex items-center justify-between">
-                  <span className="text-[#00d4ff] text-xs font-bold tracking-wider">
-                    ACTIVE ALERTS — {gcc.abbr}
-                  </span>
+              <div className="absolute right-0 top-11 w-96 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
+                <div className="p-3 border-b border-[var(--border)] flex items-center justify-between">
+                  <span className="text-[13px] font-semibold">Alerts — {gcc.abbr}</span>
                   <button
+                    type="button"
                     onClick={() => setShowAlerts(false)}
-                    className="text-[#475569] hover:text-white text-xs"
+                    className="text-[var(--muted)] hover:text-white text-sm"
                   >
                     ✕
                   </button>
                 </div>
                 {alerts.length === 0 ? (
-                  <div className="p-4 text-[#475569] text-xs">
-                    No active alerts. Alerts are raised from live OSINT triage and
-                    assessment products — not fabricated.
+                  <div className="p-4 text-[13px] text-[var(--muted)]">
+                    No alerts. Alerts come from live triage and assessments — not invented.
                   </div>
                 ) : (
                   alerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className={`p-3 border-b border-[#1e3a5f] ${
+                      className={`p-3 border-b border-[var(--border)] ${
                         alert.acknowledged ? "opacity-40" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div
-                            className={`text-[10px] font-bold mb-1 ${
-                              severityColor[alert.severity]
-                            }`}
-                          >
+                        <div>
+                          <div className={`text-[12px] font-bold mb-1 ${severityColor[alert.severity]}`}>
                             [{alert.severity}] {alert.source}
                           </div>
-                          <div className="text-[#e2e8f0] text-xs">{alert.message}</div>
-                          <div className="text-[#475569] text-[10px] mt-1 font-mono">
+                          <div className="text-[13px]">{alert.message}</div>
+                          <div className="text-[11px] text-[var(--muted)] mt-1 font-mono">
                             {alert.timestamp}
                           </div>
                         </div>
                         {!alert.acknowledged && (
                           <button
+                            type="button"
                             onClick={() => acknowledgeAlert(alert.id)}
-                            className="text-[10px] text-[#00d4ff] hover:text-white border border-[#0891b2] px-2 py-0.5 rounded flex-shrink-0"
+                            className="btn btn-primary text-[11px] py-1 px-2"
                           >
                             ACK
                           </button>
@@ -273,61 +249,44 @@ export function Header() {
             )}
           </div>
 
-          {/* Data Freshness SLA indicator */}
           <div
-            className="hidden md:flex flex-col items-end px-2 py-1 border rounded text-right"
+            className="hidden lg:flex flex-col items-end px-2.5 py-1.5 border rounded-lg text-right"
             style={{
-              borderColor: feedStale
-                ? "#ef4444"
-                : feedAgeMins === null
-                  ? "#334155"
-                  : "#1e3a5f",
-              background: feedStale ? "#ef444408" : "transparent",
+              borderColor: feedStale ? "var(--danger)" : "var(--border)",
             }}
           >
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`status-dot ${
-                  feedStale
-                    ? "danger pulse-alert"
-                    : feedAgeMins === null
-                      ? ""
-                      : "active"
-                }`}
-              />
-              <span
-                className="text-[10px] font-mono font-bold"
-                style={{
-                  color: feedStale
-                    ? "#ef4444"
-                    : feedAgeMins === null
-                      ? "#334155"
-                      : "#10b981",
-                }}
-              >
-                OSINT{" "}
-                {feedStale ? "STALE" : feedAgeMins === null ? "PENDING" : "FRESH"}
-              </span>
-            </div>
-            <span className="text-[9px] text-[#475569] font-mono">
-              {feedFreshnessLabel} · {liveFeeds.length} articles · SLA 30m
+            <span
+              className="text-[12px] font-semibold"
+              style={{
+                color: feedStale
+                  ? "var(--danger)"
+                  : feedAgeMins === null
+                    ? "var(--muted-strong)"
+                    : "var(--success)",
+              }}
+            >
+              OSINT {feedStale ? "stale" : feedAgeMins === null ? "pending" : "fresh"}
+            </span>
+            <span className="text-[11px] text-[var(--muted)]">
+              {feedLabel} · {liveFeeds.length} items
             </span>
           </div>
 
-          {/* IE Condition badge */}
           <div
-            className="flex items-center gap-2 px-3 py-1.5 border rounded"
-            style={{
-              borderColor: ieConditionColor,
-              background: `${ieConditionColor}15`,
-            }}
+            className="flex items-center gap-2 px-3 py-1.5 border rounded-lg"
+            style={{ borderColor: ieColor, background: `${ieColor}14` }}
           >
-            <span className={`status-dot ${ieConditionDotClass}`} />
             <span
-              className="text-xs font-bold tracking-widest"
-              style={{ color: ieConditionColor }}
-            >
-              IE: {runningEstimate.ieCondition}
+              className={`status-dot ${
+                runningEstimate.ieCondition === "HOSTILE"
+                  ? "danger"
+                  : runningEstimate.ieCondition === "UNCERTAIN"
+                    ? "warning"
+                    : "active"
+              }`}
+            />
+            <span className="text-[13px] font-bold" style={{ color: ieColor }}>
+              IE {runningEstimate.ieCondition}
             </span>
           </div>
         </div>

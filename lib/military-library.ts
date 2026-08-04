@@ -155,6 +155,20 @@ export function sourceYear(s: LibrarySource): number | null {
   return y >= 1900 && y <= 2100 ? y : null;
 }
 
+/** True only when the catalog marks the source public and holds an http(s) URL. */
+export function isPublicLinkable(s: LibrarySource): boolean {
+  return (
+    s.access === "public" &&
+    typeof s.url === "string" &&
+    /^https?:\/\//i.test(s.url.trim())
+  );
+}
+
+/** Public, linkable sources only — what the Doctrine UI may list. */
+export function publicSources(query: Omit<LibraryQuery, "access"> = {}): LibrarySource[] {
+  return searchLibrary({ ...query, access: "public" }).filter(isPublicLinkable);
+}
+
 export function searchLibrary(query: LibraryQuery = {}): LibrarySource[] {
   const { q, component, access, limit } = query;
   const terms = (q ?? "")
@@ -191,25 +205,24 @@ function buildDoctrineBlock(components: ComponentId[], perComponent: number): st
   const sections: string[] = [];
 
   for (const component of components) {
-    const own = LIBRARY_SOURCES.filter((s) => s.component === component && s.access !== "stub");
+    // UI and prompts only cite public http(s) links — never offline/stub entries.
+    const own = LIBRARY_SOURCES.filter(
+      (s) => s.component === component && isPublicLinkable(s)
+    );
     if (own.length === 0) continue;
 
-    // Linkable first (they can be cited with a URL), then reference-only.
     const ranked = [...own].sort(
       (a, b) =>
-        (a.access === "public" ? 0 : 1) - (b.access === "public" ? 0 : 1) ||
-        (sourceYear(b) ?? 0) - (sourceYear(a) ?? 0) ||
-        a.title.localeCompare(b.title)
+        (sourceYear(b) ?? 0) - (sourceYear(a) ?? 0) || a.title.localeCompare(b.title)
     );
 
     const lines = ranked.slice(0, perComponent).map((s) => {
       const year = sourceYear(s) ?? s.date;
-      const tail = s.url ? s.url : "no public URL on file — cite by title, do not invent a link";
-      return `- ${s.title} — ${s.author}, ${year} | ${tail}`;
+      return `- ${s.title} — ${s.author}, ${year} | ${s.url}`;
     });
 
     const omitted = ranked.length - lines.length;
-    if (omitted > 0) lines.push(`- (+${omitted} further catalogued sources in this component)`);
+    if (omitted > 0) lines.push(`- (+${omitted} further public sources in this component)`);
 
     sections.push(`${componentLabel(component)}:\n${lines.join("\n")}`);
   }
@@ -219,16 +232,19 @@ function buildDoctrineBlock(components: ComponentId[], perComponent: number): st
 
 const DOCTRINE_BLOCK = buildDoctrineBlock(OIE_COMPONENTS, 8);
 
+const PUBLIC_LINKABLE_COUNT = LIBRARY_SOURCES.filter(isPublicLinkable).length;
+
 /**
  * Doctrine-library section to append to an AI system prompt. Stable string —
  * safe to place ahead of a `cache_control` breakpoint.
+ * Only public documents with verifiable http(s) URLs are listed.
  */
 export const DOCTRINE_LIBRARY_PROMPT = `
-REFERENCE LIBRARY — catalogued UNCLASSIFIED/public research corpus available to this command (military-library, ${LIBRARY_COUNTS.sources} catalogued documents across ${LIBRARY_COUNTS.components} research components). Use it to ground doctrinal framing and to cite real literature.
+REFERENCE LIBRARY — public research literature with verifiable URLs only (${PUBLIC_LINKABLE_COUNT} linkable documents). Use it to ground doctrinal framing and to cite real literature.
 
 Rules for using this library:
-- When an assessment rests on doctrine or published research, cite an entry from this list by its exact title and author.
-- Only use a URL that appears verbatim below. Entries marked "no public URL on file" are held offline — cite them by title and author with no link.
+- When an assessment rests on doctrine or published research, cite an entry from this list by its exact title, author, and the URL shown.
+- Only use a URL that appears verbatim below. Do not invent links. Do not cite offline or non-public holdings.
 - This library is public research literature, not intelligence. Presence here is not validation of operational effectiveness. It does not substitute for the supplied OSINT as the evidence base for current events.
 - Do not cite an entry that is not listed below.
 

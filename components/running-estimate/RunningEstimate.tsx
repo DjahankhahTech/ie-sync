@@ -162,49 +162,61 @@ export function RunningEstimateModule() {
       : "#10b981";
 
   return (
-    <div className="p-4 overflow-y-auto h-full space-y-4">
-      {/* AI Assessment engine — drafts the estimate, threat picture, narratives & COAs from live OSINT */}
-      <div className="tactical-card p-4 border border-[#0891b2]">
+    <div className="page-scroll page-scroll-wide">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Adversary estimate</h1>
+          <p className="page-subtitle">
+            Draft speculation on adversary activity and likely next moves in the information
+            environment — grounded in open-source reporting. Review, challenge, and revise
+            before any briefing.
+          </p>
+        </div>
+      </header>
+
+      {/* AI Assessment engine */}
+      <div className="panel border-[var(--accent-dim)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-[#00d4ff] text-sm font-black tracking-widest">AI ASSESSMENT ENGINE — auto-generated daily 06:00 ET</div>
-            <div className="text-[#475569] text-[11px] font-mono">
-              Drafts the IE running estimate, AO threat picture, hostile narratives &amp; COAs from live OSINT — via Claude (Opus 4.8). Cached daily; refresh for the latest sources.
-            </div>
+            <h2 className="panel-title">Generate from live OSINT</h2>
+            <p className="text-[14px] text-muted m-0 mt-1 max-w-2xl">
+              Drafts the IE estimate, threat picture, hostile narratives, and COA options from
+              open sources. Cached daily; refresh pulls the latest articles.
+            </p>
           </div>
           <button
+            type="button"
             onClick={() => generateAssessment(activeGCC, true)}
             disabled={assessmentLoading}
-            className="px-4 py-2 text-xs bg-[#1e3a5f] border border-[#00d4ff] text-[#00d4ff] rounded hover:bg-[#00d4ff15] disabled:opacity-50 font-bold tracking-wider"
+            className="btn btn-primary"
           >
-            {assessmentLoading ? "ANALYZING LIVE OSINT…" : "↻ REFRESH (LATEST SOURCES)"}
+            {assessmentLoading ? "Analyzing OSINT…" : "Refresh from latest sources"}
           </button>
         </div>
         {assessmentError && (
-          <div className="mt-3 p-2 border border-[#ef4444] bg-[#ef444410] rounded text-[11px] text-[#ef4444] font-mono">
-            ✗ {assessmentError}
-          </div>
+          <div className="notice notice-danger mt-3">✗ {assessmentError}</div>
         )}
         {assessment && (
-          <div className="mt-3 p-2 border border-[#f59e0b50] bg-[#f59e0b08] rounded text-[10px] text-[#94a3b8] flex items-start gap-2">
-            <span className="text-[#f59e0b] flex-shrink-0">⚑</span>
-            <div>
-              <span className="text-[#f59e0b] font-bold">{assessment.classification} · AI-DRAFT — </span>
-              {assessment.provenance} Generated {new Date(assessment.generatedAt).toLocaleString()} from {assessment.sourceCount} OSINT sources · {assessment.model}.
-            </div>
+          <div className="notice notice-warn mt-3">
+            <strong>{assessment.classification} · AI draft.</strong>{" "}
+            {assessment.provenance} Generated{" "}
+            {new Date(assessment.generatedAt).toLocaleString()} from{" "}
+            {assessment.sourceCount} OSINT sources · {assessment.model}.
           </div>
         )}
       </div>
 
       {/* Header */}
-      <div className="tactical-card p-4">
-        <div className="flex items-start justify-between">
+      <div className="panel">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-[10px] text-[#475569] font-mono tracking-widest">{runningEstimate.classification}</div>
-            <div className="text-[#00d4ff] text-lg font-black tracking-widest mt-1">
-              RUNNING ESTIMATE — INFORMATION OPERATIONS
+            <div className="label">{runningEstimate.classification}</div>
+            <div className="text-[1.15rem] font-bold mt-1">
+              Running estimate — information environment
             </div>
-            <div className="text-[#94a3b8] text-sm mt-0.5">{runningEstimate.operationName}</div>
+            <div className="text-muted text-[15px] mt-0.5">
+              {runningEstimate.operationName || "No operation name yet — generate an assessment"}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-[#475569] text-[10px] font-mono">DTG:</div>

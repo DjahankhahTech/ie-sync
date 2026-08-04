@@ -1,179 +1,440 @@
 @import "tailwindcss";
 
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
-  --background: #0a0e1a;
-  --foreground: #e2e8f0;
-  --primary: #1a3a5c;
-  --primary-light: #2563eb;
-  --accent: #00d4ff;
-  --accent-dim: #0891b2;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --success: #10b981;
-  --muted: #334155;
-  --muted-fg: #94a3b8;
-  --border: #1e3a5f;
-  --card: #0f1829;
-  --card-hover: #162035;
+  --background: #0b1220;
+  --foreground: #e8eef7;
+  --accent: #38bdf8;
+  --accent-dim: #0ea5e9;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --success: #34d399;
+  --muted: #94a3b8;
+  --muted-strong: #64748b;
+  --border: #243247;
+  --card: #121a2b;
+  --card-hover: #1a2438;
+  --panel-head: #0e1626;
+  --radius: 10px;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  font-size: 16px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  /* Screen-legible serif base (Georgia reads far better than Times at small
-     sizes); data/document blocks opt into mono via .font-mono */
-  font-family: 'Georgia', 'Times New Roman', 'Times', serif;
-  font-size: 16px;
-  line-height: 1.65;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   min-height: 100vh;
 }
 
-/* Keep tactical/data readouts monospaced where explicitly requested */
 .font-mono,
 pre,
-code {
-  font-family: 'Courier New', 'Monaco', ui-monospace, monospace;
+code,
+.mono {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", "Courier New", monospace;
 }
 
-/* ── Legibility floor ─────────────────────────────────────────────────────
-   The tactical UI uses many tiny arbitrary sizes (8–11px). Times New Roman's
-   thin serifs blur badly at those sizes on a dark background, so raise the
-   floor and relax the wide letter-spacing that makes small serif text hard to
-   parse. */
-.text-\[8px\]  { font-size: 11.5px !important; line-height: 1.45; }
-.text-\[9px\]  { font-size: 12px !important; line-height: 1.45; }
-.text-\[10px\] { font-size: 12.5px !important; line-height: 1.5; }
-.text-\[11px\] { font-size: 13px !important; line-height: 1.5; }
-.text-xs       { font-size: 13.5px !important; line-height: 1.55; }
-.text-sm       { font-size: 14.5px !important; line-height: 1.55; }
-/* Tighten the spread-out uppercase headers — wide tracking + serif is the
-   worst case for readability. */
-.tracking-widest { letter-spacing: 0.04em !important; }
-.tracking-wider  { letter-spacing: 0.02em !important; }
-/* Brighten the lowest-contrast muted greys a notch for body legibility. */
-.text-\[\#475569\] { color: #6b7a90 !important; }
-.text-\[\#334155\] { color: #586577 !important; }
+/* Readable defaults — stop fighting tiny tactical type */
+.text-muted {
+  color: var(--muted);
+}
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0f1829; }
-::-webkit-scrollbar-thumb { background: #0891b2; border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
 
+/* ── Layout shells ─────────────────────────────────────────────────────────── */
 .tactical-bg {
-  background-image:
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, 0.08), transparent),
+    var(--background);
 }
 
-@keyframes pulse-alert {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.pulse-alert { animation: pulse-alert 1.5s ease-in-out infinite; }
-
-@keyframes scan-line {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-.scan-line {
-  position: fixed; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.3), transparent);
-  animation: scan-line 8s linear infinite;
-  pointer-events: none; z-index: 9999;
+.page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem 2.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.glow-accent { box-shadow: 0 0 10px rgba(0, 212, 255, 0.3); }
-.glow-danger { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-.glow-success { box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
-
-.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.status-dot.active { background: #10b981; box-shadow: 0 0 6px #10b981; animation: pulse-alert 2s ease-in-out infinite; }
-.status-dot.warning { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: pulse-alert 1s ease-in-out infinite; }
-.status-dot.danger { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse-alert 0.7s ease-in-out infinite; }
-
-.classification-banner {
-  text-align: center;
-  font-weight: 900;
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  padding: 4px 8px;
-  flex-shrink: 0;
-  z-index: 1300;
+.page-scroll-wide {
+  max-width: 1400px;
 }
-.classification-ts { background: #ffd700; color: #000; }
-.classification-s { background: #ff4444; color: #fff; }
-.classification-c { background: #4488ff; color: #fff; }
-.classification-u {
-  background: linear-gradient(90deg, #166534, #22c55e, #166534);
-  color: #052e16;
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.page-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  max-width: 52rem;
+  line-height: 1.55;
+}
+
+/* ── Panels & cards ────────────────────────────────────────────────────────── */
+.panel,
+.tactical-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 1.15rem;
+}
+
+.panel.p-0,
+.tactical-card.p-0 {
+  padding: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  background: var(--panel-head);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--foreground);
 }
 
 .workflow-card {
-  background: #0f1829;
-  border: 1px solid #1e3a5f;
-  border-radius: 4px;
-  padding: 0.85rem;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
 }
 .workflow-card:hover {
-  border-color: #0891b2;
-  background: #121c30;
+  border-color: var(--accent-dim);
+  background: var(--card-hover);
+}
+
+/* ── Typography helpers ────────────────────────────────────────────────────── */
+.label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-strong);
+}
+
+.text-body {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────────── */
+.field {
+  width: 100%;
+  background: #0b1322;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  outline: none;
+}
+.field::placeholder {
+  color: var(--muted-strong);
+}
+.field:focus {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--card-hover);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.btn-primary:hover {
+  background: rgba(14, 165, 233, 0.25);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover {
+  border-color: var(--accent-dim);
+  color: var(--foreground);
+}
+.chip-active {
+  border-color: var(--accent-dim);
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--accent);
+}
+.chip-emphasis {
+  color: var(--foreground);
+}
+.chip-count {
+  color: var(--muted-strong);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.stat-pill-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.stat-pill-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Notices ───────────────────────────────────────────────────────────────── */
+.notice {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.notice strong {
+  color: var(--foreground);
+  font-weight: 650;
+}
+.notice-info {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: rgba(14, 165, 233, 0.06);
+}
+.notice-warn {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.07);
+  color: #fcd34d;
+}
+.notice-warn strong {
+  color: #fde68a;
+}
+.notice-danger {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.08);
+  color: #fca5a5;
+}
+
+/* ── Status ────────────────────────────────────────────────────────────────── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status-dot.active {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+.status-dot.warning {
+  background: var(--warning);
+  box-shadow: 0 0 6px var(--warning);
+}
+.status-dot.danger {
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
+}
+
+@keyframes pulse-alert {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.pulse-alert {
+  animation: pulse-alert 1.5s ease-in-out infinite;
+}
+
+/* Soften decorative scan line — less distracting for reading */
+.scan-line {
+  display: none;
+}
+
+.classification-banner {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.75rem;
+  flex-shrink: 0;
+  z-index: 1300;
+}
+.classification-u {
+  background: #14532d;
+  color: #bbf7d0;
 }
 
 .trl-badge {
   display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 0.25rem 0.5rem;
-  border-radius: 2px;
-  border: 1px solid #f59e0b;
-  color: #f59e0b;
-  background: #f59e0b12;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
 }
 
-.tactical-card {
-  background: #0f1829;
-  border: 1px solid #1e3a5f;
-  border-radius: 4px;
-  position: relative;
+.confidence-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #334155;
   overflow: hidden;
 }
-.tactical-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, #0891b2, #00d4ff, #0891b2);
+.confidence-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
 }
 
 .map-grid {
   background: #061020;
   background-image:
-    linear-gradient(rgba(0,100,200,0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,100,200,0.15) 1px, transparent 1px),
-    linear-gradient(rgba(0,100,200,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,100,200,0.05) 1px, transparent 1px);
-  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+    linear-gradient(rgba(0, 100, 200, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 100, 200, 0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-.threat-critical { color: #ff2222; }
-.threat-high { color: #ff6622; }
-.threat-medium { color: #ffaa22; }
-.threat-low { color: #22cc88; }
-.threat-info { color: #2288ff; }
-
-@keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
+/* Legacy class bridges used across older panels */
+.glow-accent {
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
-.typewriter { overflow: hidden; white-space: nowrap; animation: typewriter 2s steps(40) forwards; }
 
-.confidence-bar { height: 4px; border-radius: 2px; background: #334155; overflow: hidden; }
-.confidence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+/* Tables — readable */
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+table.data-table th {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-head);
+}
+table.data-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.45;
+}
+table.data-table tr:hover td {
+  background: var(--card-hover);
+}

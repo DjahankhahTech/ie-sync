@@ -61,139 +61,128 @@ export function IEOverlay() {
   }, [liveFeedsFetchedAt]);
 
   return (
-    <div className="flex flex-col h-full gap-3 p-4 overflow-y-auto">
-
-      {/* ── Operational Status Strip ───────────────────────────────── */}
-      <div className="flex items-center gap-3 p-2 rounded border border-[#1e3a5f] bg-[#070d1a] flex-shrink-0 flex-wrap text-[9px] font-mono">
-        {/* Ingest Status */}
-        <div className="flex items-center gap-1.5">
-          <span className={`status-dot ${liveFeedsLoading ? "warning pulse-alert" : liveFeedsError ? "danger" : totalFeeds > 0 ? "active" : ""}`}
-            style={liveFeedsError ? { background: "#ef4444" } : totalFeeds === 0 && !liveFeedsLoading ? { background: "#f59e0b" } : undefined} />
-          <span className="text-[#475569]">INGEST:</span>
-          <span className={liveFeedsError ? "text-[#ef4444]" : liveFeedsLoading ? "text-[#f59e0b]" : totalFeeds > 0 ? "text-[#10b981]" : "text-[#f59e0b]"}>
-            {liveFeedsLoading ? "FETCHING..." : liveFeedsError ? "ERROR" : totalFeeds > 0 ? "ACTIVE" : "EMPTY"}
-          </span>
+    <div className="page-scroll page-scroll-wide gap-4">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Information environment — {gcc.abbr}</h1>
+          <p className="page-subtitle">
+            Open-source picture of the military information environment for this theater.
+            Use it to see what is happening, then open the Adversary Estimate to speculate
+            on what they may do next.
+          </p>
         </div>
-        {/* Ingest Lag */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#475569]">LAG:</span>
-          <span className="text-[#94a3b8]">{ingestLagLabel}</span>
-        </div>
-        {/* Total Articles */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#475569]">ARTICLES:</span>
-          <span className="text-[#94a3b8]">{totalFeeds}</span>
-        </div>
-        {/* Stale Count */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#475569]">STALE (&gt;24h):</span>
-          <span className={staleFeeds > 5 ? "text-[#f59e0b]" : "text-[#94a3b8]"}>{staleFeeds}</span>
-        </div>
-        {/* Alert Queue */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#475569]">ALERT QUEUE:</span>
-          <span className={criticalAlerts.length > 0 ? "text-[#ef4444] font-bold" : "text-[#94a3b8]"}>
-            {criticalAlerts.length}C / {highAlerts.length}H
-          </span>
-        </div>
-        {/* IO Coverage */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#475569]">IO-RELEVANT:</span>
-          <span className="text-[#94a3b8]">{ioFeeds.length} of {totalFeeds}</span>
-        </div>
-        {/* GCC */}
-        <div className="flex items-center gap-1 ml-auto">
-          <span className="text-xl leading-none">{gcc.flag}</span>
-          <span style={{ color: gcc.color }} className="font-bold tracking-wider">{gcc.abbr}</span>
-          <span className="text-[#334155]">|</span>
-          <span className="text-[#475569]">{gcc.aor}</span>
-        </div>
-        {/* Refresh */}
         <button
+          type="button"
           onClick={() => refetch()}
           disabled={liveFeedsLoading}
-          className="px-2 py-0.5 border rounded hover:bg-[#1e3a5f] transition-colors disabled:opacity-50"
-          style={{ borderColor: gcc.color, color: gcc.color }}
+          className="btn btn-primary"
         >
-          ↻ REFRESH
+          {liveFeedsLoading ? "Refreshing…" : "Refresh feeds"}
         </button>
-      </div>
+      </header>
 
-      {/* ── Officer action strip ───────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded border border-[#1e3a5f] bg-[#0f1829] flex-shrink-0">
-        <span className="text-[9px] font-bold tracking-widest text-[#475569] mr-1">
-          NEXT ACTIONS
-        </span>
-        <button
-          onClick={() => setActiveModule("running-estimate")}
-          className="px-2.5 py-1 text-[10px] font-bold border border-[#0891b2] rounded text-[#00d4ff] hover:bg-[#0891b220] transition-colors"
-        >
-          Running Estimate
-        </button>
-        <button
-          onClick={() => setActiveModule("io-planner")}
-          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
-        >
-          Draft ITCO / Annex I
-        </button>
-        <button
-          onClick={() => setActiveModule("sensor-fusion")}
-          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
-        >
-          Triage Live Feeds
-        </button>
-        <button
-          onClick={() => setActiveModule("sigman")}
-          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
-        >
-          SIGMAN Scan
-        </button>
-        <button
-          onClick={() => setActiveModule("ie-map")}
-          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
-        >
-          Tactical Map
-        </button>
-        <span className="text-[9px] text-[#475569] ml-auto hidden lg:inline font-mono">
-          Watch workflow: Sense → Estimate → Plan (ITCO) → Protect
-        </span>
-      </div>
-
-      {/* ── Empty / error ingest guidance ─────────────────────────── */}
-      {!liveFeedsLoading && (liveFeedsError || totalFeeds === 0) && (
-        <div
-          className="p-3 rounded border flex-shrink-0"
-          style={{
-            borderColor: liveFeedsError ? "#ef444460" : "#f59e0b60",
-            background: liveFeedsError ? "#ef444410" : "#f59e0b08",
-          }}
-        >
-          <div
-            className="text-xs font-bold tracking-wider mb-1"
-            style={{ color: liveFeedsError ? "#ef4444" : "#f59e0b" }}
+      {/* Status */}
+      <div className="panel flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
+        <div className="flex items-center gap-2">
+          <span
+            className={`status-dot ${
+              liveFeedsLoading
+                ? "warning pulse-alert"
+                : liveFeedsError
+                  ? "danger"
+                  : totalFeeds > 0
+                    ? "active"
+                    : "warning"
+            }`}
+          />
+          <span className="text-muted">Feeds</span>
+          <span className="font-semibold">
+            {liveFeedsLoading
+              ? "Loading"
+              : liveFeedsError
+                ? "Error"
+                : totalFeeds > 0
+                  ? `${totalFeeds} articles`
+                  : "Empty"}
+          </span>
+        </div>
+        <div>
+          <span className="text-muted">Lag </span>
+          <span className="font-medium">{ingestLagLabel}</span>
+        </div>
+        <div>
+          <span className="text-muted">Stale (&gt;24h) </span>
+          <span className={staleFeeds > 5 ? "text-[var(--warning)] font-semibold" : "font-medium"}>
+            {staleFeeds}
+          </span>
+        </div>
+        <div>
+          <span className="text-muted">IO-relevant </span>
+          <span className="font-medium">
+            {ioFeeds.length} of {totalFeeds}
+          </span>
+        </div>
+        <div>
+          <span className="text-muted">Alerts </span>
+          <span
+            className={
+              criticalAlerts.length > 0
+                ? "text-[var(--danger)] font-bold"
+                : "font-medium"
+            }
           >
-            {liveFeedsError
-              ? "OSINT INGEST ERROR"
-              : "NO LIVE ARTICLES YET — HONEST EMPTY STATE"}
-          </div>
-          <p className="text-[11px] text-[#94a3b8] leading-relaxed max-w-3xl">
-            {liveFeedsError
-              ? `Feed fetch failed (${liveFeedsError}). Hit REFRESH or try another theater. Threat entities below remain historical reference until a successful ingest and Running Estimate.`
-              : `IE-SYNC does not invent theater news. When RSS sources are slow, blocked, or return zero items for ${gcc.abbr}, this panel stays empty. Use REFRESH, confirm network access to public RSS, or proceed with the PMESII map and historical threat reference while waiting.`}
-          </p>
-          <div className="flex flex-wrap gap-2 mt-2">
+            {criticalAlerts.length} critical · {highAlerts.length} high
+          </span>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xl leading-none">{gcc.flag}</span>
+          <span className="font-bold" style={{ color: gcc.color }}>
+            {gcc.aor}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn btn-primary" onClick={() => setActiveModule("running-estimate")}>
+          Speculate on adversary action
+        </button>
+        <button type="button" className="btn" onClick={() => setActiveModule("io-planner")}>
+          Plan response
+        </button>
+        <button type="button" className="btn" onClick={() => setActiveModule("sensor-fusion")}>
+          Triage OSINT
+        </button>
+        <button type="button" className="btn" onClick={() => setActiveModule("sigman")}>
+          Check signatures
+        </button>
+        <button type="button" className="btn" onClick={() => setActiveModule("ie-map")}>
+          Map layers
+        </button>
+      </div>
+
+      {!liveFeedsLoading && (liveFeedsError || totalFeeds === 0) && (
+        <div className={liveFeedsError ? "notice notice-danger" : "notice notice-warn"}>
+          <strong>
+            {liveFeedsError ? "Could not load open-source feeds." : "No live articles yet."}
+          </strong>{" "}
+          {liveFeedsError
+            ? `Error: ${liveFeedsError}. Retry or switch theater. Threat list below stays on historical reference until an estimate runs.`
+            : `IE-SYNC does not invent news. When public RSS returns nothing for ${gcc.abbr}, this stays empty. Refresh, check network access, or continue with the environment map and reference threats.`}
+          <div className="flex flex-wrap gap-2 mt-3">
             <button
+              type="button"
+              className="btn btn-primary"
               onClick={() => refetch()}
               disabled={liveFeedsLoading}
-              className="px-2.5 py-1 text-[10px] font-bold border rounded text-[#00d4ff] border-[#0891b2] hover:bg-[#0891b220] disabled:opacity-50"
             >
-              ↻ Retry OSINT ingest
+              Retry feeds
             </button>
             <button
+              type="button"
+              className="btn"
               onClick={() => setActiveModule("running-estimate")}
-              className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff]"
             >
-              Open Running Estimate
+              Open adversary estimate
             </button>
           </div>
         </div>
@@ -226,73 +215,76 @@ export function IEOverlay() {
       {/* IE Tactical Overlay map + Narrative Threat Board now live in the dedicated TACTICAL MAP tab */}
 
       {/* ── Threat Entity Tracking Table ─────────────────────────── */}
-      <div className="tactical-card flex-shrink-0">
-        <div className="px-4 py-3 border-b border-[#1e3a5f] flex items-center justify-between gap-3 flex-wrap">
+      <div className="panel p-0 flex-shrink-0">
+        <div className="panel-head flex-wrap">
           <div>
-            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">THREAT ENTITY TRACKING</div>
-            <div className="text-[#475569] text-[10px] font-mono mt-0.5">
-              Known adversary actors relevant to OIE planning — not real-time tracks
-            </div>
+            <h2 className="panel-title">Adversary actors in the IE</h2>
+            <p className="text-[13px] text-muted m-0 mt-0.5">
+              Publicly attributed actors relevant to planning — not live tracks
+            </p>
           </div>
-          <div className="text-[#475569] text-[10px] font-mono text-right">
-            {threatsWithLayer.length} ENTITIES // {gcc.abbr} AOR //{" "}
-            <span className={usingHistorical ? "text-[#f59e0b]" : "text-[#10b981]"}>
-              {usingHistorical ? "HISTORICAL / REFERENCE" : "AI FUSION (LIVE)"}
+          <div className="text-[13px] text-muted text-right">
+            {threatsWithLayer.length} · {gcc.abbr} ·{" "}
+            <span className={usingHistorical ? "text-[var(--warning)]" : "text-[var(--success)]"}>
+              {usingHistorical ? "Reference library" : "From latest estimate"}
             </span>
           </div>
         </div>
         {usingHistorical && (
-          <div className="px-4 py-2 border-b border-[#1e3a5f] bg-[#f59e0b08] text-[10px] text-[#f59e0b] leading-relaxed">
-            Showing curated open-source reference entities for {gcc.abbr} until a Running Estimate
-            fuses live assessment entities. These are not sensor detections or current locations —
-            use for planning context and source research only.
+          <div className="notice notice-warn rounded-none border-x-0 border-t-0">
+            <strong>Reference list.</strong> Curated open-source actors for {gcc.abbr} until
+            an Adversary Estimate produces a fused set. Not sensor detections or current locations.
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-xs font-mono">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-[#1e3a5f] text-[#475569] text-[10px] tracking-wider">
-                <th className="text-left px-4 py-2">DESIGNATION</th>
-                <th className="text-left px-4 py-2">LAYER</th>
-                <th className="text-left px-4 py-2">TYPE</th>
-                <th className="text-left px-4 py-2">LOCATION</th>
-                <th className="text-left px-4 py-2">ACTIVITY</th>
-                <th className="text-left px-4 py-2">THREAT</th>
-                <th className="text-left px-4 py-2">CONF%</th>
-                <th className="text-left px-4 py-2">CAPABILITIES</th>
-                <th className="text-left px-4 py-2" title="When the assessment that produced this entity was generated. Nothing in this pipeline observes these entities, so this is a report time, not a sighting.">REPORTED</th>
-                <th className="text-left px-4 py-2">SOURCE</th>
+              <tr>
+                <th>Designation</th>
+                <th>Layer</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th>Activity</th>
+                <th>Threat</th>
+                <th>Conf.</th>
+                <th>Capabilities</th>
+                <th title="Report time from assessment or catalog — not a sighting">Reported</th>
+                <th>Source</th>
               </tr>
             </thead>
             <tbody>
               {threatsWithLayer.map((entity) => {
                 const layerColor = entity._layer === "PHYSICAL" ? "#10b981" : entity._layer === "TECHNICAL" ? "#00d4ff" : entity._layer === "UNKNOWN" ? "#64748b" : "#f59e0b";
                 return (
-                <tr
-                  key={entity.id}
-                  className="border-b border-[#1e3a5f] hover:bg-[#162035] transition-colors"
-                >
-                  <td className="px-4 py-2.5">
-                    <span className="font-black" style={{ color: threatColor(entity.threat) }}>
+                <tr key={entity.id}>
+                  <td>
+                    <span className="font-bold" style={{ color: threatColor(entity.threat) }}>
                       {entity.designation}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border" style={{ color: layerColor, borderColor: layerColor, background: `${layerColor}15` }}>
+                  <td>
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[11px] font-semibold border"
+                      style={{
+                        color: layerColor,
+                        borderColor: layerColor,
+                        background: `${layerColor}15`,
+                      }}
+                    >
                       {entity._layer}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-[#94a3b8]">{entity.type}</td>
-                  <td className="px-4 py-2.5 text-[#94a3b8]">
-                    <div className="whitespace-normal leading-tight">{entity.location}</div>
+                  <td className="text-muted">{entity.type}</td>
+                  <td className="text-muted max-w-[10rem]">
+                    <div className="leading-snug">{entity.location}</div>
                   </td>
-                  <td className="px-4 py-2.5 text-[#e2e8f0] min-w-[250px]">
-                    <div className="whitespace-normal leading-tight">{entity.activity}</div>
+                  <td className="min-w-[14rem]">
+                    <div className="leading-snug">{entity.activity}</div>
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td>
                     <ThreatBadge level={entity.threat} />
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td>
                     <div className="flex items-center gap-2">
                       <div className="confidence-bar w-12">
                         <div
@@ -308,13 +300,13 @@ export function IEOverlay() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-[#94a3b8]">
-                    {entity.capabilities.join(" / ")}
+                  <td className="text-muted text-[13px]">
+                    {entity.capabilities.join(" · ")}
                   </td>
-                  <td className="px-4 py-2.5 text-[#475569] text-[10px]">
+                  <td className="text-muted text-[12px] font-mono whitespace-nowrap">
                     {new Date(entity.reportedAt).toISOString().replace("T", " ").substring(0, 16)}Z
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td>
                     <SourceLinkBadge url={entity.sourceUrl} label={entity.sourceLabel} />
                   </td>
                 </tr>
