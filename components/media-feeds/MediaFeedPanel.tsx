@@ -99,8 +99,15 @@ export function MediaFeedPanel() {
           )}
 
           {filteredItems.length === 0 && !mediaFeedsLoading && !mediaFeedsError && (
-            <div className="py-4 text-center text-[#334155] text-xs font-mono">
-              NO {filter.toUpperCase()} MEDIA AVAILABLE FOR {gcc.abbr}
+            <div className="py-5 px-3 text-center space-y-1.5">
+              <div className="text-[#f59e0b] text-xs font-bold tracking-wider">
+                NO {filter === "all" ? "VIDEO / IMAGE" : filter.toUpperCase()} OSINT FOR {gcc.abbr}
+              </div>
+              <p className="text-[11px] text-[#475569] max-w-xl mx-auto leading-relaxed">
+                Media panel only shows items returned from configured public video/image sources.
+                Empty is expected when sources are unavailable or nothing matched this theater —
+                it is not fabricated filler. Try REFRESH or switch AOR.
+              </p>
             </div>
           )}
 

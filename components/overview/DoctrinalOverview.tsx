@@ -2,376 +2,447 @@
 
 import { useIEStore } from "@/store/ie-store";
 import { GCC_CONFIGS } from "@/lib/gcc-config";
-import { getDefinitionsForGCC } from "@/lib/metric-contracts";
-import { ScoringRubricPanel } from "@/components/ui/ScoringRubricPanel";
-import { MetricContractPanel } from "@/components/ui/MetricContractPanel";
 import { useLiveFeeds } from "@/hooks/useLiveFeeds";
 
-// ── GCC prefix map for metric lookups ────────────────────────────────────────
-const GCC_PREFIX: Record<string, string> = {
-  INDOPACOM: "IP",
-  CENTCOM: "CC",
-  EUCOM: "EU",
-  AFRICOM: "AF",
-  SOUTHCOM: "SC",
-  NORTHCOM: "NC",
-  SPACECOM: "SP",
-  CYBERCOM: "CY",
-};
+/**
+ * Mission brief / start-here for Marine Corps Information Officers.
+ * Maps the tool to the ITCC cycle (MCWP 8-10) and the MIG watch desk workflow.
+ */
 
-const WORKFLOWS = [
+const WATCH_CYCLE = [
   {
+    step: "1",
+    phase: "SENSE",
+    label: "IE Overlay & Live Feeds",
+    module: "cop",
+    ref: "MCWP 8-10 // Battlespace awareness",
+    desc: "Build the IE picture: PMESII-PT factors, OSINT triage, daily INFSUM, and known threat entities in the selected AOR.",
+    action: "Open COP",
+  },
+  {
+    step: "2",
+    phase: "UNDERSTAND",
     label: "Running Estimate",
     module: "running-estimate",
-    ref: "JP 3-13 Ch. IV",
-    desc: "Continuously updated IO assessment with version history, MOE/MOP trend analysis, and shift handover.",
-    status: "LIVE",
+    ref: "JP 3-13 Ch. IV // MCWP 8-10",
+    desc: "Generate or review the AI-drafted IE running estimate, narrative threads, MOE/MOP suggestions, and shift-ready assessment language.",
+    action: "Open Estimate",
   },
   {
-    label: "COA Development",
-    module: "coa",
-    ref: "JP 3-13 Ch. III",
-    desc: "Course of Action analysis with radar comparison, success probability, and execution sequencing.",
-    status: "LIVE",
+    step: "3",
+    phase: "DECIDE / PLAN",
+    label: "IO Planner → COA · Annex I · ITCO",
+    module: "io-planner",
+    ref: "ITCC → ITCO // Annex I (Information)",
+    desc: "Fill the planning worksheet (or AI-draft from OSINT), mark available IRCs, and produce a draft COA, Annex I, and Information Tasking & Coordinating Order.",
+    action: "Open Planner",
   },
   {
-    label: "Annex Generation",
-    module: "annex",
-    ref: "MCDP 5",
-    desc: "Automated Annex I (Information) and ITCO generation with role-based review lanes.",
-    status: "LIVE",
+    step: "4",
+    phase: "PROTECT",
+    label: "SIGMAN Monitor",
+    module: "sigman",
+    ref: "OPSEC / Signature management",
+    desc: "Scan open sources for friendly signature leakage that could compromise MAGTF OPSEC or enable adversary targeting in the IE.",
+    action: "Open SIGMAN",
+  },
+];
+
+const ROLE_CARDS = [
+  {
+    role: "Watch Officer / Duty IO",
+    focus: "Sense & report",
+    modules: [
+      { id: "cop", label: "IE Overlay" },
+      { id: "sensor-fusion", label: "Live Feeds" },
+      { id: "running-estimate", label: "Running Estimate" },
+    ],
+    blurb:
+      "Triage OSINT, update the IE condition, draft the INFSUM, and hand over a current running estimate.",
   },
   {
-    label: "GCC Segmentation",
-    module: "cop",
-    ref: "JP 3-0",
-    desc: "Theater-specific data isolation across 6 Geographic Combatant Commands with independent feeds.",
-    status: "LIVE",
+    role: "IO / OIE Planner",
+    focus: "Plan & synchronize",
+    modules: [
+      { id: "running-estimate", label: "Running Estimate" },
+      { id: "io-planner", label: "IO Planner" },
+      { id: "doctrine", label: "Doctrine" },
+    ],
+    blurb:
+      "Turn the estimate into synchronized information activities — COA, Annex I, and ITCO for commander approval.",
+  },
+  {
+    role: "OPSEC / SIGMAN Cell",
+    focus: "Protect friendly info",
+    modules: [
+      { id: "sigman", label: "SIGMAN" },
+      { id: "cop", label: "IE Overlay" },
+      { id: "sensor-fusion", label: "Live Feeds" },
+    ],
+    blurb:
+      "Monitor open-source signature exposure and recommend mitigations before they become adversary collection opportunities.",
   },
 ];
 
 export function DoctrinalOverview() {
   const {
-    activeGCC, setActiveModule, liveFeeds, moeMetrics, runningEstimate, alerts,
+    activeGCC,
+    setActiveModule,
+    liveFeeds,
+    runningEstimate,
+    alerts,
+    assessment,
+    generateAssessment,
+    assessmentLoading,
   } = useIEStore();
   useLiveFeeds();
   const gcc = GCC_CONFIGS[activeGCC];
-  const prefix = GCC_PREFIX[activeGCC] ?? "IP";
-  const definitions = getDefinitionsForGCC(prefix);
-  const sampleMetricId = definitions[0]?.metric_id ?? `MOE-${prefix}-1`;
 
   const ioCount = liveFeeds.filter((f) => f.ioRelevant).length;
   const unackedAlerts = alerts.filter((a) => !a.acknowledged).length;
-  const redMoes = moeMetrics.filter((m) => m.status === "RED").length;
-  const amberMoes = moeMetrics.filter((m) => m.status === "AMBER").length;
-  const greenMoes = moeMetrics.filter((m) => m.status === "GREEN").length;
 
-  const ieConditionColor = runningEstimate.ieCondition === "HOSTILE"
-    ? "#ef4444" : runningEstimate.ieCondition === "UNCERTAIN"
-    ? "#f59e0b" : "#10b981";
+  const ieConditionColor =
+    runningEstimate.ieCondition === "HOSTILE"
+      ? "#ef4444"
+      : runningEstimate.ieCondition === "UNCERTAIN"
+        ? "#f59e0b"
+        : "#10b981";
+
+  const feedsReady = liveFeeds.length > 0;
+  const estimateReady = Boolean(assessment);
 
   return (
     <div className="p-4 h-full overflow-y-auto space-y-5">
-
-      {/* ── Section 1: System Identity ───────────────────────────────── */}
+      {/* ── Identity ───────────────────────────────────────────────── */}
       <div className="tactical-card p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-[#00d4ff] text-xl font-black tracking-[0.2em]">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[#00d4ff] text-xl font-black tracking-[0.15em]">
               IE-SYNC
             </div>
             <div className="text-[#e2e8f0] text-sm font-bold tracking-wider mt-1">
-              Information Environment Synchronization Tool
+              Information Environment Synchronization for Marine Information Officers
             </div>
-            <div className="text-[#94a3b8] text-xs mt-1 max-w-2xl leading-relaxed">
-              A security-aware TRL 4 concept demonstrator designed for Information Environment
-              decision support experimentation. IE-SYNC demonstrates transparent OSINT scoring,
-              narrative tracking, and doctrinal IO workflow integration for experimentation and
-              evaluation within Marine Corps and joint innovation environments.
-            </div>
+            <p className="text-[#94a3b8] text-xs mt-2 max-w-3xl leading-relaxed">
+              Decision-support for{" "}
+              <span className="text-[#e2e8f0]">1st MIG / III MEF</span> and MAGTF
+              information staffs operating in and through the Information Environment.
+              Grounded in <span className="text-[#e2e8f0]">MCWP 8-10</span> (Information
+              in Marine Corps Operations), the{" "}
+              <span className="text-[#e2e8f0]">ITCC / ITCO</span> cycle, and joint OIE
+              doctrine (JP 3-04 / JP 3-13). All products are{" "}
+              <span className="text-[#10b981] font-semibold">UNCLASSIFIED // OSINT</span>{" "}
+              drafts that require human analyst validation before command use.
+            </p>
           </div>
-          <div className="text-right flex-shrink-0 space-y-2">
-            <span className="trl-badge">TRL 4 CONCEPT DEMONSTRATOR</span>
-            <div className="text-[#94a3b8] text-[10px] font-mono">1st MIG {"//"} III MEF</div>
-            <div className="text-[#f59e0b] text-[9px] font-bold tracking-[0.1em]">
-              FOR EXPERIMENTATION AND EVALUATION ONLY
+          <div className="text-left lg:text-right flex-shrink-0 space-y-1.5">
+            <span className="inline-block trl-badge">TRL 4 · EXPERIMENTATION</span>
+            <div className="text-[#94a3b8] text-[10px] font-mono">
+              1st MIG // III MEF // USMC
+            </div>
+            <div className="text-[#f59e0b] text-[9px] font-bold tracking-[0.08em]">
+              NOT A CLASSIFIED SYSTEM — OSINT ONLY
             </div>
           </div>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-[#1e3a5f] text-[9px] text-[#94a3b8] leading-relaxed">
-          IE-SYNC seeks integration partnerships to mature toward TRL 6-7 under controlled
-          development funding. It maps to four doctrinal IO workflows per JP 3-13 and FM 3-13,
-          providing transparent scoring logic, evidence-based metrics, and cross-source
-          corroboration — not a generic dashboard.
+        {/* Theater + status strip */}
+        <div className="mt-4 pt-3 border-t border-[#1e3a5f] flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-mono">
+          <div className="flex items-center gap-2">
+            <span className="text-xl leading-none">{gcc.flag}</span>
+            <div>
+              <div className="text-xs font-black tracking-wider" style={{ color: gcc.color }}>
+                {gcc.abbr}
+              </div>
+              <div className="text-[#475569]">{gcc.aor}</div>
+            </div>
+          </div>
+          <div className="h-6 w-px bg-[#1e3a5f] hidden sm:block" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#475569]">IE CONDITION:</span>
+            <span className="font-bold" style={{ color: ieConditionColor }}>
+              {runningEstimate.ieCondition}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#475569]">OSINT:</span>
+            <span className={feedsReady ? "text-[#10b981] font-bold" : "text-[#f59e0b]"}>
+              {feedsReady ? `${liveFeeds.length} articles` : "Loading / empty"}
+            </span>
+            {ioCount > 0 && (
+              <span className="text-[#ef4444] font-bold">({ioCount} IO-relevant)</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#475569]">ESTIMATE:</span>
+            <span className={estimateReady ? "text-[#10b981] font-bold" : "text-[#f59e0b]"}>
+              {estimateReady ? "CACHED / READY" : "NOT GENERATED"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#475569]">ALERTS:</span>
+            <span
+              className={
+                unackedAlerts > 0 ? "text-[#ef4444] font-bold" : "text-[#94a3b8]"
+              }
+            >
+              {unackedAlerts} open
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* ── Section 2: Doctrinal Workflow Map ────────────────────────── */}
+      {/* ── Primary actions for the desk ───────────────────────────── */}
+      <div className="tactical-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] tracking-[0.15em] text-[#94a3b8] font-bold">
+            WATCH DESK — START HERE
+          </span>
+          <div className="flex-1 h-px bg-[#1e3a5f]" />
+          <span className="text-[9px] text-[#475569] font-mono">
+            Recommended first 5 minutes on shift
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveModule("cop")}
+            className="px-3 py-2 rounded border border-[#0891b2] bg-[#0891b215] text-[#00d4ff] text-xs font-bold tracking-wider hover:bg-[#0891b230] transition-colors"
+          >
+            1 · Review IE Overlay
+          </button>
+          <button
+            onClick={() => {
+              setActiveModule("running-estimate");
+              if (!assessment && !assessmentLoading) generateAssessment(activeGCC);
+            }}
+            className="px-3 py-2 rounded border border-[#0891b2] bg-[#0891b215] text-[#00d4ff] text-xs font-bold tracking-wider hover:bg-[#0891b230] transition-colors"
+          >
+            2 · {estimateReady ? "Review" : "Generate"} Running Estimate
+          </button>
+          <button
+            onClick={() => setActiveModule("io-planner")}
+            className="px-3 py-2 rounded border border-[#1e3a5f] text-[#94a3b8] text-xs font-bold tracking-wider hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+          >
+            3 · Draft ITCO / Annex I
+          </button>
+          <button
+            onClick={() => setActiveModule("sigman")}
+            className="px-3 py-2 rounded border border-[#1e3a5f] text-[#94a3b8] text-xs font-bold tracking-wider hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+          >
+            4 · Check SIGMAN
+          </button>
+          <button
+            onClick={() => setActiveModule("doctrine")}
+            className="px-3 py-2 rounded border border-[#1e3a5f] text-[#94a3b8] text-xs font-bold tracking-wider hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+          >
+            Doctrine Library
+          </button>
+        </div>
+        {!feedsReady && (
+          <div className="mt-3 p-2.5 rounded border border-[#f59e0b40] bg-[#f59e0b08] text-[11px] text-[#f59e0b] leading-relaxed">
+            <span className="font-bold">Feeds not populated yet.</span> Open{" "}
+            <button
+              onClick={() => setActiveModule("cop")}
+              className="underline font-bold hover:text-white"
+            >
+              IE Overlay
+            </button>{" "}
+            or{" "}
+            <button
+              onClick={() => setActiveModule("sensor-fusion")}
+              className="underline font-bold hover:text-white"
+            >
+              Live Feeds
+            </button>{" "}
+            and wait for the OSINT ingest (or hit REFRESH). AI products draft from
+            whatever open-source items are available for the selected theater.
+          </div>
+        )}
+      </div>
+
+      {/* ── ITCC-aligned workflow ──────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] tracking-[0.15em] text-[#94a3b8] font-bold">
-            DOCTRINAL WORKFLOW MAPPING
+            INFORMATION OFFICER WORKFLOW
           </span>
           <div className="flex-1 h-px bg-[#1e3a5f]" />
-          <span className="text-[8px] text-[#475569]">Per JP 3-13 / FM 3-13</span>
+          <span className="text-[9px] text-[#475569]">
+            Aligns to MCWP 8-10 ITCC (Information Tasking &amp; Coordinating Cycle)
+          </span>
         </div>
-        <div className="grid grid-cols-4 gap-3">
-          {WORKFLOWS.map((wf, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {WATCH_CYCLE.map((wf) => (
             <button
-              key={wf.label}
+              key={wf.step}
               onClick={() => setActiveModule(wf.module)}
-              className="workflow-card text-left"
+              className="workflow-card text-left group"
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-6 rounded border border-[#0891b2] flex items-center justify-center text-[10px] text-[#00d4ff] font-bold">
-                  {i + 1}
+                <span className="w-7 h-7 rounded border border-[#0891b2] flex items-center justify-center text-[11px] text-[#00d4ff] font-bold group-hover:bg-[#0891b220]">
+                  {wf.step}
                 </span>
-                <span className="text-xs text-[#00d4ff] font-bold tracking-wider">
-                  {wf.label}
-                </span>
+                <div className="min-w-0">
+                  <div className="text-[9px] text-[#0891b2] font-mono font-bold tracking-wider">
+                    {wf.phase}
+                  </div>
+                  <div className="text-xs text-[#00d4ff] font-bold tracking-wider truncate">
+                    {wf.label}
+                  </div>
+                </div>
               </div>
-              <div className="text-[9px] text-[#0891b2] font-mono mb-1">{wf.ref}</div>
-              <div className="text-[9px] text-[#94a3b8] leading-relaxed">{wf.desc}</div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="flex items-center gap-1 text-[8px]">
-                  <span className="status-dot active" />
-                  <span className="text-[#10b981] font-bold">{wf.status}</span>
+              <div className="text-[9px] text-[#475569] font-mono mb-1.5">{wf.ref}</div>
+              <div className="text-[11px] text-[#94a3b8] leading-relaxed">{wf.desc}</div>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[9px] text-[#10b981] font-bold flex items-center gap-1">
+                  <span className="status-dot active" /> LIVE MODULE
                 </span>
-                <span className="text-[8px] text-[#0891b2]">GO TO &rarr;</span>
+                <span className="text-[9px] text-[#0891b2] font-bold group-hover:text-[#00d4ff]">
+                  {wf.action} →
+                </span>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Section 3: Key Capabilities Hero ─────────────────────────── */}
+      {/* ── Role lanes ─────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] tracking-[0.15em] text-[#94a3b8] font-bold">
-            KEY DIFFERENTIATING CAPABILITIES
-          </span>
-          <div className="flex-1 h-px bg-[#1e3a5f]" />
-          <span className="text-[8px] text-[#475569]">Not a generic dashboard — doctrinal alignment</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {/* Capability 1: Explicit Scoring Logic */}
-          <div className="tactical-card p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full border border-[#00d4ff] flex items-center justify-center text-[10px] text-[#00d4ff] font-bold">1</span>
-              <span className="text-xs text-[#00d4ff] font-bold tracking-wider">EXPLICIT SCORING LOGIC</span>
-            </div>
-            <div className="text-[9px] text-[#94a3b8] mb-2 leading-relaxed">
-              Every feed item is scored using a transparent, reproducible rubric.
-              No black-box algorithms. The scoring formula, keyword lists, and
-              limitations are visible to every analyst.
-            </div>
-            <ScoringRubricPanel compact />
-          </div>
-
-          {/* Capability 2: Evidence Basis */}
-          <div className="tactical-card p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full border border-[#00d4ff] flex items-center justify-center text-[10px] text-[#00d4ff] font-bold">2</span>
-              <span className="text-xs text-[#00d4ff] font-bold tracking-wider">EVIDENCE BASIS</span>
-            </div>
-            <div className="text-[9px] text-[#94a3b8] mb-2 leading-relaxed">
-              Every metric is backed by a MetricDefinition contract specifying data inputs,
-              source classification, collection freshness, and known failure modes.
-              No &ldquo;magic numbers&rdquo; &mdash; if we cannot explain it, we do not show it.
-            </div>
-            <div className="space-y-1.5 text-[9px]">
-              <div className="flex items-center gap-2">
-                <span className="text-[#00d4ff] font-bold">{definitions.length}</span>
-                <span className="text-[#94a3b8]">MetricDefinitions for {activeGCC}</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                <SourceBadge label="PUBLIC OSINT" color="#10b981" />
-                <SourceBadge label="INTERNAL SYSTEM" color="#f59e0b" />
-                <SourceBadge label="CLASSIFIED SYSTEM" color="#ef4444" />
-                <SourceBadge label="REFERENCE DB" color="#3b82f6" />
-              </div>
-              <div className="text-[8px] text-[#475569]">
-                Each input carries: source name, organization, freshness SLA, reference URL (public only), and access classification.
-              </div>
-            </div>
-          </div>
-
-          {/* Capability 3: Cross-Source Corroboration */}
-          <div className="tactical-card p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full border border-[#00d4ff] flex items-center justify-center text-[10px] text-[#00d4ff] font-bold">3</span>
-              <span className="text-xs text-[#00d4ff] font-bold tracking-wider">CROSS-SOURCE CORROBORATION</span>
-            </div>
-            <div className="text-[9px] text-[#94a3b8] mb-2 leading-relaxed">
-              Feed items are automatically checked for corroboration across multiple
-              independent sources using title fingerprint matching.
-            </div>
-            <div className="space-y-1.5">
-              <div className="grid grid-cols-3 gap-2 text-[9px]">
-                <div className="p-1.5 border border-[#10b981] bg-[#10b98108] rounded text-center">
-                  <div className="text-[#10b981] font-bold">CORROBORATED</div>
-                  <div className="text-[#94a3b8] text-[8px]">&ge;2 independent sources</div>
-                </div>
-                <div className="p-1.5 border border-[#f59e0b] bg-[#f59e0b08] rounded text-center">
-                  <div className="text-[#f59e0b] font-bold">UNVERIFIED</div>
-                  <div className="text-[#94a3b8] text-[8px]">Single source only</div>
-                </div>
-                <div className="p-1.5 border border-[#ef4444] bg-[#ef444408] rounded text-center">
-                  <div className="text-[#ef4444] font-bold">REFUTED</div>
-                  <div className="text-[#94a3b8] text-[8px]">Contradicted by verified</div>
-                </div>
-              </div>
-              <div className="text-[8px] text-[#475569]">
-                Confidence: &ge;3 signal types = HIGH | 2 = MEDIUM | 1 signal type = LOW
-              </div>
-            </div>
-          </div>
-
-          {/* Capability 4: Metric Contract Definitions */}
-          <div className="tactical-card p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full border border-[#00d4ff] flex items-center justify-center text-[10px] text-[#00d4ff] font-bold">4</span>
-              <span className="text-xs text-[#00d4ff] font-bold tracking-wider">METRIC CONTRACT DEFINITIONS</span>
-            </div>
-            <div className="text-[9px] text-[#94a3b8] mb-2 leading-relaxed">
-              Every MOE is governed by a formal MetricDefinition: formula, inputs,
-              cadence, thresholds, doctrinal basis, and documented failure modes.
-              Sample contract for {activeGCC}:
-            </div>
-            <MetricContractPanel metricId={sampleMetricId} compact />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Section 4: Active GCC Status ─────────────────────────────── */}
-      <div className="tactical-card p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[9px] tracking-[0.15em] text-[#94a3b8] font-bold">
-            ACTIVE GCC STATUS
+            BY ROLE — MAGTF INFORMATION STAFF
           </span>
           <div className="flex-1 h-px bg-[#1e3a5f]" />
         </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{gcc.flag}</span>
-            <div>
-              <div className="text-xs font-black tracking-wider" style={{ color: gcc.color }}>{gcc.abbr}</div>
-              <div className="text-[#475569] text-[9px] font-mono">{gcc.aor}</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {ROLE_CARDS.map((card) => (
+            <div key={card.role} className="tactical-card p-4">
+              <div className="text-[#00d4ff] text-xs font-bold tracking-wider">
+                {card.role}
+              </div>
+              <div className="text-[9px] text-[#0891b2] font-mono mt-0.5 mb-2">
+                {card.focus.toUpperCase()}
+              </div>
+              <p className="text-[11px] text-[#94a3b8] leading-relaxed mb-3">
+                {card.blurb}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {card.modules.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setActiveModule(m.id)}
+                    className="px-2 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="h-6 w-px bg-[#1e3a5f]" />
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] text-[#94a3b8]">IE:</span>
-            <span className="text-xs font-bold" style={{ color: ieConditionColor }}>
-              {runningEstimate.ieCondition}
-            </span>
-          </div>
-
-          <div className="h-6 w-px bg-[#1e3a5f]" />
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] text-[#94a3b8]">PRIORITY:</span>
-            <span className="text-xs font-bold text-[#00d4ff]">{runningEstimate.priority}</span>
-          </div>
-
-          <div className="h-6 w-px bg-[#1e3a5f]" />
-
-          <div className="text-[9px]">
-            <span className="text-[#94a3b8]">FEEDS:</span>
-            <span className="text-white font-bold ml-1">{liveFeeds.length}</span>
-            <span className="text-[#94a3b8]"> total,</span>
-            <span className="text-[#ef4444] font-bold ml-1">{ioCount}</span>
-            <span className="text-[#94a3b8]"> IO-relevant</span>
-          </div>
-
-          <div className="h-6 w-px bg-[#1e3a5f]" />
-
-          <div className="text-[9px]">
-            <span className="text-[#94a3b8]">MOEs:</span>
-            <span className="text-[#ef4444] font-bold ml-1">{redMoes} RED</span>
-            <span className="text-[#f59e0b] font-bold ml-1">{amberMoes} AMBER</span>
-            <span className="text-[#10b981] font-bold ml-1">{greenMoes} GREEN</span>
-          </div>
-
-          <div className="h-6 w-px bg-[#1e3a5f]" />
-
-          <div className="text-[9px]">
-            <span className="text-[#94a3b8]">ALERTS:</span>
-            <span className={unackedAlerts > 0 ? "text-[#ef4444] font-bold ml-1" : "text-[#94a3b8] ml-1"}>
-              {unackedAlerts} unacknowledged
-            </span>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* ── Section 5: Integration Partnership Context ────────────────── */}
+      {/* ── What this is / is not ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="tactical-card p-4">
+          <div className="text-[#10b981] text-xs font-bold tracking-wider mb-2">
+            WHAT IE-SYNC GIVES YOU
+          </div>
+          <ul className="space-y-1.5 text-[11px] text-[#94a3b8] leading-relaxed list-none">
+            <li>
+              <span className="text-[#10b981] font-bold">•</span> Theater-filtered
+              OSINT for the selected AOR (INDOPACOM default for III MEF)
+            </li>
+            <li>
+              <span className="text-[#10b981] font-bold">•</span> AI-drafted Running
+              Estimate, Daily INFSUM, and SIGMAN scan (human-validated drafts)
+            </li>
+            <li>
+              <span className="text-[#10b981] font-bold">•</span> Worksheet-driven COA,
+              Annex I (Information), and ITCO generation for planning cells
+            </li>
+            <li>
+              <span className="text-[#10b981] font-bold">•</span> Transparent scoring,
+              source links, and a doctrine library cited in products
+            </li>
+            <li>
+              <span className="text-[#10b981] font-bold">•</span> Glossary of IO / OIE
+              terms built for officers new to the information warfighting function
+            </li>
+          </ul>
+        </div>
+        <div className="tactical-card p-4">
+          <div className="text-[#f59e0b] text-xs font-bold tracking-wider mb-2">
+            WHAT IT IS NOT
+          </div>
+          <ul className="space-y-1.5 text-[11px] text-[#94a3b8] leading-relaxed list-none">
+            <li>
+              <span className="text-[#f59e0b] font-bold">•</span> Not SIPR / JWICS —
+              no classified feeds, no real-time force tracking, no C2 authority
+            </li>
+            <li>
+              <span className="text-[#f59e0b] font-bold">•</span> Not a substitute for
+              the commander&apos;s estimate or approved ITCO — AI outputs are drafts
+            </li>
+            <li>
+              <span className="text-[#f59e0b] font-bold">•</span> Not live adversary
+              tracking — threat entities are reference / assessment-derived, not
+              sensor tracks
+            </li>
+            <li>
+              <span className="text-[#f59e0b] font-bold">•</span> Not a replacement for
+              MIG COC tools, IBMCS, or formal assessment boards
+            </li>
+            <li>
+              <span className="text-[#f59e0b] font-bold">•</span> TRL 4 concept
+              demonstrator for experimentation and evaluation under controlled use
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* ── Doctrine anchors ───────────────────────────────────────── */}
       <div className="tactical-card p-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[9px] tracking-[0.15em] text-[#94a3b8] font-bold">
-            TRL MATURATION PATHWAY
+          <span className="text-[10px] tracking-[0.15em] text-[#94a3b8] font-bold">
+            DOCTRINAL ANCHORS
           </span>
           <div className="flex-1 h-px bg-[#1e3a5f]" />
+          <button
+            onClick={() => setActiveModule("doctrine")}
+            className="text-[9px] text-[#0891b2] font-bold hover:text-[#00d4ff]"
+          >
+            OPEN DOCTRINE LIBRARY →
+          </button>
         </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 border border-[#f59e0b] bg-[#f59e0b08] rounded">
-            <div className="text-[#f59e0b] text-xs font-bold tracking-wider mb-1">
-              TRL 4 &mdash; CURRENT
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+          {[
+            { pub: "MCWP 8-10", note: "Information in Marine Corps Operations · ITCC / ITCO" },
+            { pub: "JP 3-04", note: "Information in Joint Operations" },
+            { pub: "JP 3-13", note: "Information Operations · running estimate" },
+            { pub: "MCDP 8 / MCWP 3-32", note: "Information & MAGTF IO TTPs" },
+          ].map((d) => (
+            <div
+              key={d.pub}
+              className="p-2.5 rounded border border-[#1e3a5f] bg-[#070d1a]"
+            >
+              <div className="text-[#00d4ff] font-bold font-mono">{d.pub}</div>
+              <div className="text-[#475569] mt-1 leading-snug">{d.note}</div>
             </div>
-            <div className="text-[9px] text-[#94a3b8] leading-relaxed">
-              Component validation in lab environment. Transparent OSINT scoring,
-              narrative tracking, doctrinal workflow integration demonstrated.
-              Security-hardened (NIST 800-171 controls active).
-            </div>
-          </div>
-          <div className="p-3 border border-[#0891b2] bg-[#0891b208] rounded">
-            <div className="text-[#0891b2] text-xs font-bold tracking-wider mb-1">
-              TRL 6 &mdash; TARGET
-            </div>
-            <div className="text-[9px] text-[#94a3b8] leading-relaxed">
-              System/subsystem model demonstration in relevant environment.
-              Integration with live IC/DoD feeds. NLP/NER scoring upgrade.
-              CAC/PIV authentication. Classified system interfaces.
-            </div>
-          </div>
-          <div className="p-3 border border-[#334155] bg-[#33415508] rounded">
-            <div className="text-[#94a3b8] text-xs font-bold tracking-wider mb-1">
-              TRL 7 &mdash; FUTURE
-            </div>
-            <div className="text-[9px] text-[#94a3b8] leading-relaxed">
-              System prototype demonstration in operational environment.
-              Full SIPR integration. Real-time analyst collaboration.
-              Production hardening for III MEF deployment.
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-[#1e3a5f]">
-          <div className="text-[9px] text-[#94a3b8] leading-relaxed">
-            <span className="text-[#00d4ff] font-bold">TARGET ENVIRONMENTS:</span> Marine Corps
-            Innovation Command (MCIC), Joint IO Warfare Center (JIOWC), III MEF G7,
-            1st MIG S3, joint innovation programs under controlled development funding.
-          </div>
+          ))}
         </div>
       </div>
 
+      {/* ── Maturation note (compact) ──────────────────────────────── */}
+      <div className="tactical-card p-3">
+        <div className="text-[10px] text-[#475569] leading-relaxed">
+          <span className="text-[#94a3b8] font-bold">MATURATION:</span> TRL 4 component
+          validation (lab). Target environments for controlled evaluation: Marine Corps
+          innovation pathways, III MEF G-7, 1st MIG S-3, and joint OIE experimentation
+          venues. Partnership interest is welcome for TRL 6–7 maturation under
+          appropriate funding and security controls.
+        </div>
+      </div>
     </div>
-  );
-}
-
-// ── Helper Components ──────────────────────────────────────────────────────
-
-function SourceBadge({ label, color }: { label: string; color: string }) {
-  return (
-    <span
-      className="px-1.5 py-0.5 rounded text-[7px] font-bold tracking-[0.08em]"
-      style={{ border: `1px solid ${color}40`, color, background: `${color}10` }}
-    >
-      {label}
-    </span>
   );
 }

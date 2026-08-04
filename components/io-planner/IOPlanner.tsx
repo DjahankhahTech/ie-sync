@@ -175,7 +175,7 @@ export function IOPlanner() {
       <div>
         <div className="text-[#00d4ff] text-sm font-black tracking-widest">IO PLANNER</div>
         <div className="text-[#475569] text-xs font-mono">
-          OIE course-of-action worksheet → detailed COA, Annex I (Information), and ITCO — drafted by Claude (Opus 4.8) from your inputs, available forces, and the AO threat picture.
+          Marine / joint OIE planning worksheet → draft COA, Annex I (Information), and ITCO (MCWP 8-10 ITCC). AI fills from OSINT, available IRCs, and the AO threat picture — human review required before command use.
         </div>
       </div>
 

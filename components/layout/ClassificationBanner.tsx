@@ -1,22 +1,21 @@
 "use client";
 
 interface Props {
-  level?: "TS//SCI" | "SECRET//NOFORN" | "SECRET" | "CONFIDENTIAL" | "UNCLASSIFIED";
+  /** All IE-SYNC product data is open-source. Never imply classified content. */
+  level?: "UNCLASSIFIED//OSINT" | "UNCLASSIFIED" | "CUI";
+  note?: string;
 }
 
-export function ClassificationBanner({ level = "SECRET//NOFORN" }: Props) {
-  const classes: Record<string, string> = {
-    "TS//SCI": "classification-ts",
-    "SECRET//NOFORN": "classification-s",
-    "SECRET": "classification-s",
-    "CONFIDENTIAL": "classification-c",
-    "UNCLASSIFIED": "classification-u",
-  };
-  const cls = classes[level] ?? "classification-s";
-
+export function ClassificationBanner({
+  level = "UNCLASSIFIED//OSINT",
+  note = "OPEN-SOURCE ONLY — NOT FOR OPERATIONAL DECISION WITHOUT HUMAN VALIDATION",
+}: Props) {
   return (
-    <div className={`classification-banner ${cls}`}>
-      ⚠ {level} ⚠
+    <div className="classification-banner classification-u flex flex-col sm:flex-row items-center justify-center gap-x-3 gap-y-0.5 px-2">
+      <span>// {level} //</span>
+      <span className="font-semibold tracking-wide opacity-90 text-[10px] sm:text-[11px]">
+        {note}
+      </span>
     </div>
   );
 }

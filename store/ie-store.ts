@@ -201,7 +201,7 @@ const initialGCC: GCCId = "INDOPACOM";
 const initialData = emptyOperationalState(initialGCC);
 
 export const useIEStore = create<IEState>((set, get) => ({
-  activeModule: "cop",
+  activeModule: "home",
   setActiveModule: (module) => set({ activeModule: module }),
 
   activeGCC: initialGCC,

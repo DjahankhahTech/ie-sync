@@ -99,11 +99,46 @@ code {
 .status-dot.warning { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: pulse-alert 1s ease-in-out infinite; }
 .status-dot.danger { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse-alert 0.7s ease-in-out infinite; }
 
-.classification-banner { text-align: center; font-weight: 900; font-size: 0.75rem; letter-spacing: 0.2em; padding: 3px 0; }
+.classification-banner {
+  text-align: center;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  z-index: 1300;
+}
 .classification-ts { background: #ffd700; color: #000; }
 .classification-s { background: #ff4444; color: #fff; }
 .classification-c { background: #4488ff; color: #fff; }
-.classification-u { background: #44cc44; color: #000; }
+.classification-u {
+  background: linear-gradient(90deg, #166534, #22c55e, #166534);
+  color: #052e16;
+}
+
+.workflow-card {
+  background: #0f1829;
+  border: 1px solid #1e3a5f;
+  border-radius: 4px;
+  padding: 0.85rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.workflow-card:hover {
+  border-color: #0891b2;
+  background: #121c30;
+}
+
+.trl-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  background: #f59e0b12;
+}
 
 .tactical-card {
   background: #0f1829;

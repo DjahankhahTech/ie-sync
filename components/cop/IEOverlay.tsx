@@ -67,11 +67,11 @@ export function IEOverlay() {
       <div className="flex items-center gap-3 p-2 rounded border border-[#1e3a5f] bg-[#070d1a] flex-shrink-0 flex-wrap text-[9px] font-mono">
         {/* Ingest Status */}
         <div className="flex items-center gap-1.5">
-          <span className={`status-dot ${liveFeedsLoading ? "active" : liveFeedsError ? "" : "active"}`}
-            style={liveFeedsError ? { background: "#ef4444" } : undefined} />
+          <span className={`status-dot ${liveFeedsLoading ? "warning pulse-alert" : liveFeedsError ? "danger" : totalFeeds > 0 ? "active" : ""}`}
+            style={liveFeedsError ? { background: "#ef4444" } : totalFeeds === 0 && !liveFeedsLoading ? { background: "#f59e0b" } : undefined} />
           <span className="text-[#475569]">INGEST:</span>
-          <span className={liveFeedsError ? "text-[#ef4444]" : "text-[#10b981]"}>
-            {liveFeedsLoading ? "FETCHING..." : liveFeedsError ? "ERROR" : "ACTIVE"}
+          <span className={liveFeedsError ? "text-[#ef4444]" : liveFeedsLoading ? "text-[#f59e0b]" : totalFeeds > 0 ? "text-[#10b981]" : "text-[#f59e0b]"}>
+            {liveFeedsLoading ? "FETCHING..." : liveFeedsError ? "ERROR" : totalFeeds > 0 ? "ACTIVE" : "EMPTY"}
           </span>
         </div>
         {/* Ingest Lag */}
@@ -119,6 +119,86 @@ export function IEOverlay() {
         </button>
       </div>
 
+      {/* ── Officer action strip ───────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded border border-[#1e3a5f] bg-[#0f1829] flex-shrink-0">
+        <span className="text-[9px] font-bold tracking-widest text-[#475569] mr-1">
+          NEXT ACTIONS
+        </span>
+        <button
+          onClick={() => setActiveModule("running-estimate")}
+          className="px-2.5 py-1 text-[10px] font-bold border border-[#0891b2] rounded text-[#00d4ff] hover:bg-[#0891b220] transition-colors"
+        >
+          Running Estimate
+        </button>
+        <button
+          onClick={() => setActiveModule("io-planner")}
+          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+        >
+          Draft ITCO / Annex I
+        </button>
+        <button
+          onClick={() => setActiveModule("sensor-fusion")}
+          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+        >
+          Triage Live Feeds
+        </button>
+        <button
+          onClick={() => setActiveModule("sigman")}
+          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+        >
+          SIGMAN Scan
+        </button>
+        <button
+          onClick={() => setActiveModule("ie-map")}
+          className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff] transition-colors"
+        >
+          Tactical Map
+        </button>
+        <span className="text-[9px] text-[#475569] ml-auto hidden lg:inline font-mono">
+          Watch workflow: Sense → Estimate → Plan (ITCO) → Protect
+        </span>
+      </div>
+
+      {/* ── Empty / error ingest guidance ─────────────────────────── */}
+      {!liveFeedsLoading && (liveFeedsError || totalFeeds === 0) && (
+        <div
+          className="p-3 rounded border flex-shrink-0"
+          style={{
+            borderColor: liveFeedsError ? "#ef444460" : "#f59e0b60",
+            background: liveFeedsError ? "#ef444410" : "#f59e0b08",
+          }}
+        >
+          <div
+            className="text-xs font-bold tracking-wider mb-1"
+            style={{ color: liveFeedsError ? "#ef4444" : "#f59e0b" }}
+          >
+            {liveFeedsError
+              ? "OSINT INGEST ERROR"
+              : "NO LIVE ARTICLES YET — HONEST EMPTY STATE"}
+          </div>
+          <p className="text-[11px] text-[#94a3b8] leading-relaxed max-w-3xl">
+            {liveFeedsError
+              ? `Feed fetch failed (${liveFeedsError}). Hit REFRESH or try another theater. Threat entities below remain historical reference until a successful ingest and Running Estimate.`
+              : `IE-SYNC does not invent theater news. When RSS sources are slow, blocked, or return zero items for ${gcc.abbr}, this panel stays empty. Use REFRESH, confirm network access to public RSS, or proceed with the PMESII map and historical threat reference while waiting.`}
+          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <button
+              onClick={() => refetch()}
+              disabled={liveFeedsLoading}
+              className="px-2.5 py-1 text-[10px] font-bold border rounded text-[#00d4ff] border-[#0891b2] hover:bg-[#0891b220] disabled:opacity-50"
+            >
+              ↻ Retry OSINT ingest
+            </button>
+            <button
+              onClick={() => setActiveModule("running-estimate")}
+              className="px-2.5 py-1 text-[10px] font-bold border border-[#1e3a5f] rounded text-[#94a3b8] hover:border-[#0891b2] hover:text-[#00d4ff]"
+            >
+              Open Running Estimate
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Critical Alert Banner — Actionable ─────────────────────── */}
       {criticalAlerts.length > 0 && (
         <div className="p-3 border border-[#ef4444] bg-[#ef444410] rounded flex-shrink-0 space-y-2">
@@ -147,12 +227,27 @@ export function IEOverlay() {
 
       {/* ── Threat Entity Tracking Table ─────────────────────────── */}
       <div className="tactical-card flex-shrink-0">
-        <div className="px-4 py-3 border-b border-[#1e3a5f] flex items-center justify-between">
-          <div className="text-[#00d4ff] text-xs font-bold tracking-widest">THREAT ENTITY TRACKING</div>
-          <div className="text-[#475569] text-[10px] font-mono">
-            {threatsWithLayer.length} ENTITIES // {gcc.abbr} AOR // {usingHistorical ? "HISTORICAL / REFERENCE" : "AI FUSION (LIVE)"}
+        <div className="px-4 py-3 border-b border-[#1e3a5f] flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-[#00d4ff] text-xs font-bold tracking-widest">THREAT ENTITY TRACKING</div>
+            <div className="text-[#475569] text-[10px] font-mono mt-0.5">
+              Known adversary actors relevant to OIE planning — not real-time tracks
+            </div>
+          </div>
+          <div className="text-[#475569] text-[10px] font-mono text-right">
+            {threatsWithLayer.length} ENTITIES // {gcc.abbr} AOR //{" "}
+            <span className={usingHistorical ? "text-[#f59e0b]" : "text-[#10b981]"}>
+              {usingHistorical ? "HISTORICAL / REFERENCE" : "AI FUSION (LIVE)"}
+            </span>
           </div>
         </div>
+        {usingHistorical && (
+          <div className="px-4 py-2 border-b border-[#1e3a5f] bg-[#f59e0b08] text-[10px] text-[#f59e0b] leading-relaxed">
+            Showing curated open-source reference entities for {gcc.abbr} until a Running Estimate
+            fuses live assessment entities. These are not sensor detections or current locations —
+            use for planning context and source research only.
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
