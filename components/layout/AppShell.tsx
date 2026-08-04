@@ -40,14 +40,14 @@ export function AppShell() {
   }, [activeGCC, prefetchAIProducts]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden tactical-bg">
+    <div className="flex flex-col h-screen overflow-hidden tactical-bg print:h-auto print:overflow-visible">
       {/* Scanning line effect */}
       <div className="scan-line" />
 
       <ClassificationBanner />
       <Sidebar />
       <Header />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden print:overflow-visible">
         <ActiveComponent />
       </main>
     </div>

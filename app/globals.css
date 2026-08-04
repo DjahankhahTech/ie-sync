@@ -89,8 +89,24 @@ code,
   gap: 1.25rem;
 }
 
+/* In a fixed-height flex column, children with overflow:hidden (.panel) have a
+   zero automatic minimum height, so the browser crushes them to fit instead of
+   scrolling. Sections of a scroll page must keep their natural height. */
+.page-scroll > * {
+  flex-shrink: 0;
+}
+
 .page-scroll-wide {
   max-width: 1400px;
+}
+
+/* Print / save-as-PDF: unlock the viewport-height shell so the whole page
+   paginates instead of clipping to one screen. */
+@media print {
+  .page-scroll {
+    height: auto;
+    overflow: visible;
+  }
 }
 
 .page-header {
