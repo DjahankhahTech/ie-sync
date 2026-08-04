@@ -41,7 +41,7 @@ export function emptyRunningEstimate(gcc: GCCId): RunningEstimate {
     operationName: "",
     missionStatement: "",
     ieCondition: "UNCERTAIN",
-    ieSituation: `No assessment generated yet for the ${cfg?.aor ?? "selected"} AOR. Load the live OSINT feed, then run the AI assessment to draft an IE running estimate from current open-source reporting.`,
+    ieSituation: `No estimate yet for ${cfg?.aor ?? "the selected theater"}. Open Live OSINT so today's articles load, then press "Refresh from latest sources" above to draft one from current open-source reporting.`,
     adversaryCapabilities: [],
     friendlyCapabilities: [],
     assumptions: [],

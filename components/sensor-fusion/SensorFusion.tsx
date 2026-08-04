@@ -76,10 +76,10 @@ export function SensorFusion() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="text-[#00d4ff] text-sm font-black tracking-widest">
-            LIVE SENSOR FUSION — {gcc.abbr}
+            LIVE OSINT — {gcc.abbr}
           </div>
           <div className="text-[#475569] text-xs font-mono">
-            {gcc.name} // {gcc.aor} // Open-source feed aggregation
+            {gcc.name} // {gcc.aor} // Open-source news for this theater, scored for information-operations relevance
           </div>
           {liveFeedsFetchedAt && (
             <div className="text-[#334155] text-[10px] font-mono mt-0.5">
@@ -159,7 +159,7 @@ export function SensorFusion() {
               IO RELEVANCE SCORE DISTRIBUTION — {gcc.abbr}
             </div>
             <div className="text-[#475569] text-[10px] mb-3 font-mono">
-              AI keyword & threat-indicator scoring against {gcc.keywords.length} AOR-specific terms
+              Keyword & threat-indicator scoring against {gcc.keywords.length} theater-specific terms
             </div>
             <ResponsiveContainer width="100%" height={130}>
               <BarChart data={scoreDistribution} margin={{ top: 2, right: 8, left: -28, bottom: 2 }}>
@@ -339,7 +339,7 @@ export function SensorFusion() {
             ))}
           </div>
           <div className="mt-2 text-[9px] text-[#334155] font-mono">
-            Items escalated here should be incorporated into the Running Estimate by the duty analyst.
+            Items escalated here should be worked into the Adversary Estimate by the duty analyst.
           </div>
         </div>
       )}
@@ -350,7 +350,7 @@ export function SensorFusion() {
           <div className="flex items-center justify-between mb-3">
             <div className="text-[#00d4ff] text-xs font-bold tracking-widest">ACTIVE FEED REGISTRY — {gcc.abbr}</div>
             <span className="text-[9px] text-[#475569] font-mono border border-[#1e3a5f] px-2 py-0.5 rounded">
-              Collection method: RSS / 5-min polling · SLA 30m
+              Public news feeds · checked every 5 min · counted stale after 30 min
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -605,7 +605,7 @@ function LiveFeedCard({
                     : "border-[#00d4ff] text-[#00d4ff] hover:bg-[#00d4ff15]"
                 }`}
               >
-                {isEscalated ? "✓ ESCALATED" : "↑ ESCALATE TO RUNNING EST"}
+                {isEscalated ? "✓ ESCALATED" : "↑ SEND TO ADVERSARY ESTIMATE"}
               </button>
             </div>
 

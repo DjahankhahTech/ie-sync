@@ -27,8 +27,8 @@ const moduleMeta: Record<string, { title: string; blurb: string }> = {
     blurb: "Triage open-source reporting for the selected theater",
   },
   "io-planner": {
-    title: "Plan & ITCO",
-    blurb: "Turn the estimate into COA, Annex I, and ITCO drafts",
+    title: "Plan the Response",
+    blurb: "Turn the estimate into a course of action, annex, and tasking order",
   },
   sigman: {
     title: "Signature management",
@@ -238,7 +238,7 @@ export function Header() {
                             onClick={() => acknowledgeAlert(alert.id)}
                             className="btn btn-primary text-[11px] py-1 px-2"
                           >
-                            ACK
+                            MARK SEEN
                           </button>
                         )}
                       </div>

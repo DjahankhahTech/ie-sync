@@ -55,7 +55,7 @@ export function DailyINFSUM() {
     return (
       <div className="tactical-card flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="text-[#ef4444] text-xs font-mono">INFSUM GENERATION FAILED: {infsumError}</div>
+          <div className="text-[#ef4444] text-xs font-mono">Couldn’t build the daily summary: {infsumError} — press Retry.</div>
           <button onClick={refetch} className="text-[9px] border border-[#ef4444] text-[#ef4444] px-2 py-0.5 rounded hover:bg-[#ef444415]">
             RETRY
           </button>
@@ -132,7 +132,7 @@ export function DailyINFSUM() {
           {/* ── AI Executive Summary (overall AI-generated INFSUM) ── */}
           <div className="border border-[#0891b2] rounded p-3 bg-[#0891b208]">
             <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-              <div className="text-[#00d4ff] text-[10px] font-bold tracking-widest">AI EXECUTIVE SUMMARY — Claude · auto-generated daily 06:00 ET</div>
+              <div className="text-[#00d4ff] text-[10px] font-bold tracking-widest">AI EXECUTIVE SUMMARY — Claude · auto-updated 0600 / 1200 / 1800 ET</div>
               <div className="flex items-center gap-2">
                 {ai && <span className="text-[#475569] text-[9px] font-mono">as of {new Date(ai.generatedAt).toLocaleString()}</span>}
                 <button
@@ -186,7 +186,7 @@ export function DailyINFSUM() {
                   </div>
                 )}
                 <div className="text-[9px] text-[#475569] pt-1.5 border-t border-[#1e3a5f]">
-                  <span className="text-[#f59e0b]">{ai.classification} · AI-DRAFT</span> · {ai.sourceCount} sources · auto-generated daily 06:00 ET · {ai.model} · human review required
+                  <span className="text-[#f59e0b]">{ai.classification} · AI-DRAFT</span> · {ai.sourceCount} sources · auto-updated 0600/1200/1800 ET · {ai.model} · human review required
                 </div>
               </div>
             )}
@@ -349,7 +349,7 @@ export function DailyINFSUM() {
 
           {/* Footer methodology note */}
           <div className="text-[8px] font-mono text-[#334155] border-t border-[#1e3a5f] pt-2">
-            <span className="text-[#475569]">METHODOLOGY:</span> INFSUM generated from {infsum.sourcesQueried} OSINT RSS feeds via keyword-based relevance scoring (no NLP/NER). Threat categories derived from term matching — not intelligence assessment. Narrative trends show word frequency ≥3 across all ingested articles. <span className="text-[#ef4444]">FOR PLANNING USE ONLY — REQUIRES ANALYST VALIDATION BEFORE OPERATIONAL USE.</span>
+            <span className="text-[#475569]">HOW THIS WAS BUILT:</span> {infsum.sourcesQueried} public news feeds, scored by keyword matching only — no AI analysis at this step. &quot;Threat categories&quot; just count matched words; they are not an intel assessment. Narrative trends show words appearing 3+ times across today&apos;s articles. <span className="text-[#ef4444]">FOR PLANNING USE ONLY — AN ANALYST MUST VERIFY BEFORE ANYTHING HERE IS ACTED ON.</span>
           </div>
         </div>
       )}

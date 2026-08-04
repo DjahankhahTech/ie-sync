@@ -148,7 +148,7 @@ const UNIVERSAL_TERMS: GlossaryEntry[] = [
   {
     term: "IO",
     definition:
-      "Information Operations — the integrated employment of electronic warfare, computer network operations, psychological operations, military deception, and operations security to influence adversary decision-making while protecting friendly information.",
+      "Information Operations — the integrated employment of electronic warfare, cyber operations, MISO (formerly called psychological operations), military deception, and operations security to influence adversary decision-making while protecting friendly information.",
     category: "IO Core",
   },
   {
@@ -321,6 +321,12 @@ const MODULE_TERMS: Record<string, GlossaryEntry[]> = {
   ],
 
   "sensor-fusion": [
+    {
+      term: "SIGACT",
+      definition:
+        "Significant Activity — an event important enough to report up the chain (attack, threat, notable adversary action). Tagging an escalated item SIGACT tells the analyst it may warrant a report of its own.",
+      category: "Analysis",
+    },
     {
       term: "Sensor Fusion",
       definition:

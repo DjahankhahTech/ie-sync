@@ -92,7 +92,7 @@ export function IEMapTab() {
     { key: "INFORMATIONAL", label: "INFORMATIONAL", color: "#f59e0b", desc: "narratives · media · influence operations" },
     { key: "TECHNICAL", label: "TECHNICAL", color: "#00d4ff", desc: "networks · cyber · SIGINT — information systems" },
     { key: "PHYSICAL", label: "PHYSICAL", color: "#10b981", desc: "platforms · emitters · installations · geography" },
-    { key: "UNKNOWN", label: "UNCLASSIFIED LAYER", color: "#64748b", desc: "capabilities did not map to an OIE layer — not assumed" },
+    { key: "UNKNOWN", label: "LAYER UNKNOWN", color: "#64748b", desc: "couldn't tell which information layer this actor belongs to — shown rather than guessed" },
   ];
 
   // Global infrastructure layers (flights & AIS removed per OIE focus).
@@ -138,8 +138,8 @@ export function IEMapTab() {
   const view = isAll
     ? { center: [20, 0] as [number, number], zoom: 2 }
     : { center: [GCC_CONFIGS[mapScope].mapCenter[1], GCC_CONFIGS[mapScope].mapCenter[0]] as [number, number], zoom: GCC_CONFIGS[mapScope].mapZoom };
-  const scopeLabel = isAll ? "ALL CCMDs" : GCC_CONFIGS[mapScope].abbr;
-  const scopeAor = isAll ? "GLOBAL — ALL COMBATANT COMMANDS" : GCC_CONFIGS[mapScope].aor.toUpperCase();
+  const scopeLabel = isAll ? "ALL THEATERS" : GCC_CONFIGS[mapScope].abbr;
+  const scopeAor = isAll ? "GLOBAL — ALL THEATERS" : GCC_CONFIGS[mapScope].aor.toUpperCase();
 
   return (
     <div className="flex flex-col h-full">
@@ -147,10 +147,10 @@ export function IEMapTab() {
       <div className="flex-shrink-0 border-b border-[#1e3a5f] bg-[#070d1a] px-4 py-2 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <div className="text-[#00d4ff] text-sm font-black tracking-widest">IE TACTICAL OVERLAY — OIE INFORMATION LAYERS</div>
+            <div className="text-[#00d4ff] text-sm font-black tracking-widest">MAP — WHERE THE INFORMATION FIGHT IS HAPPENING</div>
             <div className="text-[#475569] text-[10px] font-mono">
-              ESRI WORLD IMAGERY // WGS-84 // {scopeAor}
-              {!liveForScope && <span className="ml-2 px-1.5 py-0.5 border border-[#f59e0b] text-[#f59e0b] rounded">REFERENCE — run AI assessment for live AOR picture</span>}
+              SATELLITE IMAGERY · {scopeAor} · Layers: what people believe (INFORMATIONAL), the systems that carry it (TECHNICAL), the hardware and places (PHYSICAL)
+              {!liveForScope && <span className="ml-2 px-1.5 py-0.5 border border-[#f59e0b] text-[#f59e0b] rounded">REFERENCE DATA — open Adversary Estimate to generate the live picture</span>}
               {unmappedCount > 0 && (
                 <span
                   className="ml-2 px-1.5 py-0.5 border border-[#64748b] text-[#64748b] rounded"
@@ -214,13 +214,13 @@ export function IEMapTab() {
         {/* On-map CCMD selector (top-center) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-[#0891b2] bg-[rgba(10,14,26,0.92)] shadow-lg">
-            <span className="text-[#475569] text-[9px] font-mono tracking-widest">CCMD</span>
+            <span className="text-[#475569] text-[9px] font-mono tracking-widest">THEATER</span>
             <select
               value={mapScope}
               onChange={(e) => setMapScope(e.target.value as MapScope)}
               className="bg-[#0f1829] border border-[#1e3a5f] text-[#00d4ff] text-[12px] font-bold tracking-wider rounded px-2 py-1 focus:outline-none focus:border-[#0891b2] cursor-pointer"
             >
-              <option value="ALL">🌐 ALL CCMDs</option>
+              <option value="ALL">🌐 ALL THEATERS</option>
               {ALL_GCCS.map((g) => (
                 <option key={g} value={g}>{GCC_CONFIGS[g].flag} {GCC_CONFIGS[g].abbr}</option>
               ))}

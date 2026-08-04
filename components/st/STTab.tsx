@@ -39,7 +39,7 @@ export function STTab() {
     <div className="p-4 overflow-y-auto h-full space-y-4">
       <div>
         <div className="text-[#00d4ff] text-sm font-black tracking-widest">S&amp;T RESOURCES — IO PLANNER &amp; OFFICER LIBRARY</div>
-        <div className="text-[#475569] text-xs font-mono">Latest research &amp; white papers, plus curated journals, research orgs, conferences, and training opportunities for OIE planners and officers.</div>
+        <div className="text-[#475569] text-xs font-mono">Latest research &amp; white papers, plus curated journals, research orgs, conferences, and training opportunities for planners and officers working operations in the information environment (OIE).</div>
       </div>
 
       {/* Latest research / white papers (live) */}

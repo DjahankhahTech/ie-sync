@@ -107,7 +107,7 @@ export function IEOverlay() {
           </span>
         </div>
         <div>
-          <span className="text-muted">Lag </span>
+          <span className="text-muted">Feed age </span>
           <span className="font-medium">{ingestLagLabel}</span>
         </div>
         <div>
@@ -428,12 +428,12 @@ function ActionableAlert({ alert }: { alert: { id: string; severity: string; mes
 
   // Derive recommended action from alert message
   const getRecommendedAction = (msg: string): string => {
-    if (msg.includes("APT") || msg.includes("CYBER") || msg.includes("C2")) return "Request CYBERCOM DCO authority; isolate affected endpoints";
-    if (msg.includes("DEEPFAKE") || msg.includes("deepfake")) return "Initiate platform takedown request; PA counter-statement";
-    if (msg.includes("BOT") || msg.includes("bot") || msg.includes("inauthentic")) return "Flag for SOCMINT cell; request platform CIB investigation";
-    if (msg.includes("MOE BREACH")) return "Convene IO Assessment Board; update Running Estimate";
-    if (msg.includes("SIGINT") || msg.includes("intercept")) return "Alert collection management; update SIGINT requirements";
-    return "Analyst review required — assign to watch officer";
+    if (msg.includes("APT") || msg.includes("CYBER") || msg.includes("C2")) return "Cyber threat — notify the cyber defense element and disconnect affected systems";
+    if (msg.includes("DEEPFAKE") || msg.includes("deepfake")) return "Likely fake media — ask the platform to take it down and have Public Affairs put out the true story";
+    if (msg.includes("BOT") || msg.includes("bot") || msg.includes("inauthentic")) return "Possible fake-account network — flag to the social-media intelligence (SOCMINT) cell for investigation";
+    if (msg.includes("MOE BREACH")) return "An effectiveness target was missed — bring it to the assessment board and update the Adversary Estimate";
+    if (msg.includes("SIGINT") || msg.includes("intercept")) return "Signals-related report — alert the collection manager to adjust what we're listening for";
+    return "Needs a human look — hand to the watch officer";
   };
 
   return (
@@ -461,13 +461,7 @@ function ActionableAlert({ alert }: { alert: { id: string; severity: string; mes
             onClick={() => acknowledgeAlert(alert.id)}
             className="text-[8px] px-2 py-0.5 border border-[#10b981] text-[#10b981] rounded hover:bg-[#10b98115] font-mono"
           >
-            ACK
-          </button>
-          <button
-            onClick={() => acknowledgeAlert(alert.id)}
-            className="text-[8px] px-2 py-0.5 border border-[#334155] text-[#475569] rounded hover:bg-[#1e3a5f] font-mono"
-          >
-            ASSIGN
+            MARK SEEN
           </button>
         </div>
       </div>
@@ -541,7 +535,7 @@ function NarrativeCard({ thread }: { thread: ReturnType<typeof useIEStore.getSta
           TREND: {thread.trend}
         </span>
         <span className="text-[8px] text-[#334155] font-mono">
-          {isAdversarial ? "IO CELL ATTRIBUTED" : "FRIENDLY IO"}
+          {isAdversarial ? "ATTRIBUTED TO ADVERSARY IO CELL" : "FRIENDLY IO"}
         </span>
       </div>
     </div>
@@ -709,7 +703,7 @@ function MOETile({ moe }: { moe: ReturnType<typeof useIEStore.getState>["moeMetr
             <div className="text-[#94a3b8] font-bold">{run.sample_size?.toLocaleString() ?? "—"}</div>
           </div>
           <div className="bg-[#070d1a] border border-[#1e3a5f] rounded p-1.5">
-            <div className="text-[#475569]">CI BAND</div>
+            <div className="text-[#475569]">LIKELY RANGE</div>
             <div className="text-[#94a3b8]">{run.ci_lower?.toFixed(1)}–{run.ci_upper?.toFixed(1)}</div>
           </div>
         </div>
@@ -808,7 +802,7 @@ function MOETile({ moe }: { moe: ReturnType<typeof useIEStore.getState>["moeMetr
         <div className="pt-1 border-t border-[#1e3a5f] text-[#334155]">
           <div>COMPUTED: {(() => { try { return new Date(run.computed_at).toISOString().replace("T", " ").substring(0, 16) + "Z"; } catch { return "—"; } })()}</div>
           <div>WINDOW: {(() => { try { return new Date(run.window_start).toISOString().substring(0, 10); } catch { return ""; } })()} → {(() => { try { return new Date(run.window_end).toISOString().substring(0, 10); } catch { return ""; } })()}</div>
-          <div>INPUTS HASH: {run.inputs_hash}</div>
+          <div>DATA FINGERPRINT: {run.inputs_hash}</div>
         </div>
 
         <button
