@@ -81,7 +81,14 @@ async function fetchOutlet(outlet: AdversaryOutlet): Promise<AdversaryMediaItem[
 async function collect(gccId: GCCId) {
   const cfg = ADVERSARY_MEDIA[gccId];
   const perOutlet = await Promise.all(cfg.outlets.map(fetchOutlet));
-  let items = perOutlet.flat();
+  // Dedupe by link — overlapping feeds from the same publisher (RT / RT World)
+  // syndicate the same story.
+  const seen = new Set<string>();
+  let items = perOutlet.flat().filter((it) => {
+    if (seen.has(it.link)) return false;
+    seen.add(it.link);
+    return true;
+  });
 
   if (cfg.keywords?.length) {
     const kws = cfg.keywords.map((k) => k.toLowerCase());
