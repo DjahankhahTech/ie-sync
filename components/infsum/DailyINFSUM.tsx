@@ -23,8 +23,8 @@ const THREAT_COLORS: Record<string, string> = {
 };
 
 export function DailyINFSUM() {
-  // The AI Executive Summary lives in the store — posted 3x daily (0600/1200/
-  // 1800 ET), server-cached, and prefetched in the background on app load so
+  // The AI Executive Summary lives in the store — published once daily at
+  // 0500 ET, server-cached, and prefetched in the background on app load so
   // it's typically ready before the user reads it. setActiveGCC clears it on
   // switch, so a stale summary is never shown while the new AOR's loads.
   const { infsum, infsumLoading, infsumError, activeGCC, aiSummary: ai, aiSummaryLoading: aiLoading, aiSummaryError: aiError, loadAISummary } = useIEStore();
@@ -132,16 +132,12 @@ export function DailyINFSUM() {
           {/* ── AI Executive Summary (overall AI-generated INFSUM) ── */}
           <div className="border border-[#0891b2] rounded p-3 bg-[#0891b208]">
             <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-              <div className="text-[#00d4ff] text-[10px] font-bold tracking-widest">AI EXECUTIVE SUMMARY — Claude · auto-updated 0600 / 1200 / 1800 ET</div>
+              <div className="text-[#00d4ff] text-[10px] font-bold tracking-widest">AI EXECUTIVE SUMMARY — Claude · updated once daily at 0500 ET</div>
               <div className="flex items-center gap-2">
                 {ai && <span className="text-[#475569] text-[9px] font-mono">as of {new Date(ai.generatedAt).toLocaleString()}</span>}
-                <button
-                  onClick={() => loadAISummary(activeGCC, true)}
-                  disabled={aiLoading}
-                  className="text-[10px] border border-[#00d4ff] text-[#00d4ff] px-2.5 py-1 rounded hover:bg-[#00d4ff15] disabled:opacity-50 font-bold tracking-wider"
-                >
-                  {aiLoading ? "LOADING…" : "↻ REFRESH"}
-                </button>
+                <span className="text-[10px] border border-[#1e3a5f] text-[#475569] px-2.5 py-1 rounded font-bold tracking-wider">
+                  {aiLoading ? "LOADING…" : "DAILY · 0500 ET"}
+                </span>
               </div>
             </div>
             {aiError && <div className="text-[#ef4444] text-[11px] font-mono">✗ {aiError}</div>}

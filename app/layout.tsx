@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IE-SYNC | Capture the Information Environment",
+  title: "IE-SYNC | One Source for Military Information Officers",
   description:
-    "UNCLASSIFIED//OSINT workbench for Marine Corps Information Officers — characterize the military information environment, draft adversary speculation, and plan ITCO / Annex I responses. 1st MIG // III MEF experimentation.",
+    "UNCLASSIFIED//OSINT source for military Information Officers — live OSINT, theater news, adversary activity, public doctrine, and S&T resources in one place. 1st MIG // III MEF experimentation.",
 };
 
 export default function RootLayout({

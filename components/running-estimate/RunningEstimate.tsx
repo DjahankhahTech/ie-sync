@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useIEStore } from "@/store/ie-store";
 import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
+import { AdversaryMediaReader } from "./AdversaryMediaReader";
 import {
   LineChart,
   Line,
@@ -57,17 +58,6 @@ const MOE_DEFINITIONS: Record<string, { formula: string; inputs: string; cadence
   },
 };
 
-// ── Running Estimate Version History ──────────────────────────────────────
-interface REVersion {
-  version: string;       // e.g. "v1.0"
-  savedAt: string;       // ISO
-  analystInitials: string;
-  ieCondition: string;
-  ieSituationSnap: string;
-  moeSnapshot: Array<{ id: string; current: number; status: string }>;
-  changeNote: string;
-}
-
 // ── Recorded assessment history ───────────────────────────────────────────
 // Real snapshots written by /api/analyze on each fresh generation. There is no
 // synthetic fallback on purpose: an empty archive renders as an empty chart
@@ -109,70 +99,35 @@ export function RunningEstimateModule() {
   }));
 
   const [showMoeDefs, setShowMoeDefs] = useState(false);
-  const [showVersions, setShowVersions] = useState(false);
-  const [versions, setVersions] = useState<REVersion[]>([
-    // Seed with a "v1.0" baseline so there's always a prior version to compare
-    {
-      version: "v1.0",
-      savedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8h ago
-      analystInitials: "JDO",
-      ieCondition: runningEstimate.ieCondition,
-      ieSituationSnap: runningEstimate.ieSituation.substring(0, 200),
-      moeSnapshot: moeMetrics.map((m) => ({ id: m.id, current: m.current, status: m.status })),
-      changeNote: "Initial baseline — watch handover from 0600Z shift",
-    },
-  ]);
-  const [changeNote, setChangeNote] = useState("");
-  const [analystInitials, setAnalystInitials] = useState("IO");
-  const [showDiff, setShowDiff] = useState<string | null>(null); // version string to show diff for
 
   // Client-only timestamp — avoids SSR/hydration mismatch
   const [nowDTG, setNowDTG] = useState<string | null>(null);
   useEffect(() => { setNowDTG(new Date().toISOString().substring(0, 16)); }, []);
 
   // Auto-load the day's cached AI assessment on mount / AOR change (does not
-  // regenerate — served from the daily cache warmed by cron at 06:00 ET).
+  // regenerate — served from the daily cache warmed by cron at 0500 ET).
   useEffect(() => {
     if (!assessment && !assessmentLoading) generateAssessment(activeGCC);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGCC]);
 
-  const currentVersionLabel = `v${(1 + versions.length).toFixed(1)}`;
-
-  const saveVersion = () => {
-    const newVer: REVersion = {
-      version: currentVersionLabel,
-      savedAt: new Date().toISOString(),
-      analystInitials,
-      ieCondition: runningEstimate.ieCondition,
-      ieSituationSnap: runningEstimate.ieSituation.substring(0, 200),
-      moeSnapshot: moeMetrics.map((m) => ({ id: m.id, current: m.current, status: m.status })),
-      changeNote: changeNote || "No change note provided",
-    };
-    setVersions((v) => [...v, newVer]);
-    setChangeNote("");
-    setShowVersions(true);
-  };
-
-  const ieConditionColor =
-    runningEstimate.ieCondition === "HOSTILE"
-      ? "#ef4444"
-      : runningEstimate.ieCondition === "UNCERTAIN"
-      ? "#f59e0b"
-      : "#10b981";
 
   return (
     <div className="page-scroll page-scroll-wide">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Adversary estimate</h1>
+          <h1 className="page-title">Adversary narrative</h1>
           <p className="page-subtitle">
-            Draft speculation on adversary activity and likely next moves in the information
-            environment — grounded in open-source reporting. Review, challenge, and revise
-            before any briefing.
+            What anti-American audiences in this theater are reading right now — live from
+            adversary state-controlled media — followed by the daily AI-drafted estimate of
+            the actors and narratives behind it. Review, challenge, and revise before any
+            briefing.
           </p>
         </div>
       </header>
+
+      {/* Live adversary state-media reader — the narrative space itself */}
+      <AdversaryMediaReader />
 
       {/* AI Assessment engine */}
       <div className="panel border-[var(--accent-dim)]">
@@ -180,18 +135,13 @@ export function RunningEstimateModule() {
           <div>
             <h2 className="panel-title">Generate from live OSINT</h2>
             <p className="text-[14px] text-muted m-0 mt-1 max-w-2xl">
-              Drafts the estimate, threat picture, hostile narratives, and course-of-action (COA)
-              options from open sources. Cached daily; refresh pulls the latest articles.
+              Drafts the estimate, threat picture, and hostile narratives from open sources.
+              Published once daily at 0500 Eastern — every viewer sees the same product.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => generateAssessment(activeGCC, true)}
-            disabled={assessmentLoading}
-            className="btn btn-primary"
-          >
-            {assessmentLoading ? "Analyzing OSINT…" : "Refresh from latest sources"}
-          </button>
+          <span className="btn btn-ghost cursor-default">
+            {assessmentLoading ? "Loading today's estimate…" : "Daily product · 0500 ET"}
+          </span>
         </div>
         {assessmentError && (
           <div className="notice notice-danger mt-3">✗ {assessmentError}</div>
@@ -205,146 +155,6 @@ export function RunningEstimateModule() {
           </div>
         )}
       </div>
-
-      {/* Header */}
-      <div className="panel">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="label">{runningEstimate.classification}</div>
-            <div className="text-[1.15rem] font-bold mt-1">
-              Adversary estimate — information environment
-            </div>
-            <div className="text-muted text-[15px] mt-0.5">
-              {runningEstimate.operationName || "No operation name yet — generate an assessment"}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[#475569] text-[10px] font-mono">DTG:</div>
-            <div className="text-[#00d4ff] font-mono text-sm">{runningEstimate.dtg}</div>
-            <div className="mt-2 px-3 py-1 border rounded text-sm font-bold" style={{ borderColor: ieConditionColor, color: ieConditionColor }}>
-              IE: {runningEstimate.ieCondition}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 p-3 bg-[#070d1a] border border-[#1e3a5f] rounded">
-          <div className="text-[#475569] text-[10px] tracking-wider mb-1">MISSION STATEMENT</div>
-          <div className="text-[#e2e8f0] text-xs leading-relaxed">{runningEstimate.missionStatement}</div>
-        </div>
-
-        <div className="mt-3 p-3 bg-[#070d1a] border border-[#1e3a5f] rounded">
-          <div className="text-[#475569] text-[10px] tracking-wider mb-1">COMMANDER&apos;S DESIRED OUTCOME IN THE IE</div>
-          <div className="text-[#00d4ff] text-xs leading-relaxed">{runningEstimate.cdruObjective}</div>
-        </div>
-
-        {/* ── Version control bar ─────────────────────────────────────── */}
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#475569] text-[9px] font-mono">ANALYST:</span>
-            <input
-              type="text"
-              value={analystInitials}
-              onChange={(e) => setAnalystInitials(e.target.value.substring(0, 4).toUpperCase())}
-              className="w-12 px-1 py-0.5 bg-[#070d1a] border border-[#1e3a5f] rounded text-[9px] text-[#e2e8f0] focus:outline-none focus:border-[#0891b2] font-mono text-center"
-              placeholder="JDO"
-            />
-          </div>
-          <input
-            type="text"
-            value={changeNote}
-            onChange={(e) => setChangeNote(e.target.value)}
-            placeholder={`Change note for ${currentVersionLabel}...`}
-            className="flex-1 min-w-[180px] px-2 py-0.5 bg-[#070d1a] border border-[#1e3a5f] rounded text-[9px] text-[#e2e8f0] placeholder-[#334155] focus:outline-none focus:border-[#0891b2] font-mono"
-          />
-          <button
-            onClick={saveVersion}
-            className="px-2 py-0.5 text-[9px] border border-[#00d4ff] text-[#00d4ff] rounded hover:bg-[#00d4ff15] font-mono font-bold whitespace-nowrap"
-          >
-            SAVE SNAPSHOT {currentVersionLabel}
-          </button>
-          <button
-            onClick={() => setShowVersions(!showVersions)}
-            className="px-2 py-0.5 text-[9px] border border-[#1e3a5f] text-[#475569] rounded hover:border-[#334155] font-mono"
-          >
-            PAST VERSIONS ({versions.length}) {showVersions ? "▲" : "▼"}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Version History Panel ────────────────────────────────────── */}
-      {showVersions && (
-        <div className="tactical-card p-4">
-          <div className="text-[#00d4ff] text-xs font-bold tracking-widest mb-3">ESTIMATE VERSION HISTORY</div>
-          <div className="space-y-2">
-            {[...versions].reverse().map((ver, idx) => {
-              const prev = [...versions].reverse()[idx + 1] ?? null;
-              const moeChanges = prev
-                ? ver.moeSnapshot.filter((m) => {
-                    const prevMoe = prev.moeSnapshot.find((p) => p.id === m.id);
-                    return prevMoe && prevMoe.status !== m.status;
-                  })
-                : [];
-              const ieChanged = prev && prev.ieCondition !== ver.ieCondition;
-              return (
-                <div key={ver.version} className="p-3 border border-[#1e3a5f] rounded bg-[#070d1a]">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#00d4ff] text-[10px] font-black font-mono">{ver.version}</span>
-                      <span className="text-[#475569] text-[9px] font-mono">{ver.savedAt.substring(0, 16)}Z</span>
-                      <span className="px-1.5 py-0.5 border border-[#1e3a5f] text-[#94a3b8] rounded text-[9px] font-mono">{ver.analystInitials}</span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border"
-                        style={{
-                          color: ver.ieCondition === "HOSTILE" ? "#ef4444" : ver.ieCondition === "UNCERTAIN" ? "#f59e0b" : "#10b981",
-                          borderColor: ver.ieCondition === "HOSTILE" ? "#ef4444" : ver.ieCondition === "UNCERTAIN" ? "#f59e0b" : "#10b981",
-                        }}>
-                        IE: {ver.ieCondition}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setShowDiff(showDiff === ver.version ? null : ver.version)}
-                      className="text-[9px] text-[#475569] border border-[#1e3a5f] px-1.5 py-0.5 rounded hover:border-[#334155] font-mono"
-                    >
-                      {showDiff === ver.version ? "HIDE CHANGES" : "WHAT CHANGED ▼"}
-                    </button>
-                  </div>
-                  <div className="text-[#94a3b8] text-[9px] mt-1 font-mono italic">{ver.changeNote}</div>
-
-                  {/* Diff view */}
-                  {showDiff === ver.version && (
-                    <div className="mt-2 space-y-1.5">
-                      {ieChanged && (
-                        <div className="text-[9px] font-mono p-1.5 bg-[#f59e0b08] border border-[#f59e0b30] rounded">
-                          <span className="text-[#f59e0b]">IE CONDITION CHANGED: </span>
-                          <span className="text-[#ef4444]">{prev?.ieCondition ?? "—"}</span>
-                          <span className="text-[#475569]"> → </span>
-                          <span className="text-[#10b981]">{ver.ieCondition}</span>
-                        </div>
-                      )}
-                      {moeChanges.length > 0 ? (
-                        <div className="space-y-1">
-                          {moeChanges.map((m) => {
-                            const prevMoe = prev?.moeSnapshot.find((p) => p.id === m.id);
-                            return (
-                              <div key={m.id} className="text-[9px] font-mono p-1 bg-[#060d1a] border border-[#1e3a5f] rounded flex items-center gap-2">
-                                <span className="text-[#475569]">{m.id}:</span>
-                                <span className="text-[#ef4444]">{prevMoe?.status ?? "—"}</span>
-                                <span className="text-[#475569]">→</span>
-                                <span className="text-[#10b981]">{m.status}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-[9px] text-[#334155] font-mono">No MOE status changes from previous version.</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* IE Situation + Trend Charts */}
       <div className="grid grid-cols-2 gap-4">
@@ -398,7 +208,7 @@ export function RunningEstimateModule() {
               <div className="text-[11px] text-[#94a3b8] font-bold">No recorded history yet</div>
               <div className="text-[10px] text-[#64748b] leading-relaxed max-w-md">
                 {historyEnabled
-                  ? "This chart plots only assessments this system actually generated and stored. The archive fills as the 0600/1200/1800 ET runs execute — expect a readable trend after roughly three days."
+                  ? "This chart plots only assessments this system actually generated and stored. The archive fills as the daily 0500 ET run executes — expect a readable trend after roughly a week."
                   : "This system isn't set up to save past assessments yet, so no trend can be shown. Ask the system admin to enable history storage."}
               </div>
               <div className="text-[9px] text-[#475569] mt-1">

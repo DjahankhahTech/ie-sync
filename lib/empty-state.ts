@@ -1,8 +1,8 @@
 /**
  * Empty operational state. The app no longer ships fabricated theater
- * intelligence — threat entities, narratives, COAs, MOE/MOP, signatures, and
+ * intelligence — threat entities, narratives, MOE/MOP, signatures, and
  * the running estimate all start EMPTY. They are populated from:
- *   - live OSINT (/api/feeds, /api/infsum, /api/media-feeds), and
+ *   - live OSINT (/api/feeds, /api/infsum), and
  *   - the Claude-backed AI assessment (/api/analyze), via generateAssessment().
  * Modules with no real data source render an honest "no data" state until an
  * analyst connects a feed or enters data.
@@ -15,7 +15,6 @@ import type {
   ThreatEntity,
   NarrativeThread,
   RunningEstimate,
-  COAOption,
   MOEMetric,
   MOPMetric,
   SignatureItem,
@@ -27,7 +26,6 @@ export interface GCCOperationalState {
   threatEntities: ThreatEntity[];
   narrativeThreads: NarrativeThread[];
   runningEstimate: RunningEstimate;
-  coaOptions: COAOption[];
   moeMetrics: MOEMetric[];
   mopMetrics: MOPMetric[];
   signatureItems: SignatureItem[];
@@ -60,7 +58,6 @@ export function emptyOperationalState(gcc: GCCId): GCCOperationalState {
     threatEntities: [],
     narrativeThreads: [],
     runningEstimate: emptyRunningEstimate(gcc),
-    coaOptions: [],
     moeMetrics: [],
     mopMetrics: [],
     signatureItems: [],

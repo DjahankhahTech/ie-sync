@@ -21,6 +21,7 @@
  */
 
 import raw from "./military-library.generated.json";
+import additionsRaw from "./military-library.additions.json";
 
 // ── Model ────────────────────────────────────────────────────────────────────
 
@@ -80,7 +81,19 @@ interface GeneratedCatalog {
 
 const catalog = raw as unknown as GeneratedCatalog;
 
-export const LIBRARY_SOURCES: LibrarySource[] = catalog.sources;
+// Weekly-built public additions. A scheduled cloud routine researches new
+// freely-accessible doctrine/research documents and PRs them into
+// military-library.additions.json (never into the generated drive catalog,
+// which sync-military-library.mjs overwrites). Only access:"public" rows with
+// a URL are accepted, and anything duplicating a catalog id or URL is dropped.
+const additionSources = ((additionsRaw as unknown as { sources?: LibrarySource[] }).sources ?? []);
+const catalogIds = new Set(catalog.sources.map((s) => s.id));
+const catalogUrls = new Set(catalog.sources.map((s) => s.url).filter(Boolean) as string[]);
+const mergedAdditions = additionSources.filter(
+  (s) => s.access === "public" && !!s.url && !catalogIds.has(s.id) && !catalogUrls.has(s.url)
+);
+
+export const LIBRARY_SOURCES: LibrarySource[] = [...catalog.sources, ...mergedAdditions];
 export const LIBRARY_COMPONENTS: LibraryComponent[] = catalog.components;
 export const LIBRARY_COUNTS = catalog.counts;
 export const LIBRARY_ROOT = catalog.libraryRoot;

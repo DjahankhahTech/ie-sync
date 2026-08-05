@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { DAILY_SLOT, productDayET } from "@/lib/daily-product";
 import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
@@ -8,7 +9,7 @@ import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // AI assessment engine. Takes REAL ingested OSINT (from /api/feeds) and uses
 // Claude to draft doctrinally-grounded OIE planning products: an IE Running
-// Estimate, the AO threat picture, hostile-narrative analysis, and COAs.
+// Estimate, the AO threat picture, and hostile-narrative analysis.
 //
 // Everything it returns is an UNCLASSIFIED // OSINT-derived AI DRAFT and is
 // marked as requiring human analyst validation before operational use. The
@@ -83,39 +84,15 @@ const ASSESSMENT_SCHEMA = {
         required: ["title", "platform", "sentiment", "reach", "velocity", "adversarial", "summary", "trend"],
       },
     },
-    coaOptions: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          id: { type: "string" },
-          name: { type: "string" },
-          capabilities: { type: "array", items: { type: "string", enum: ["MISO", "CYBER", "EW", "DECEPTION", "OPSEC", "MILDEC", "PA"] } },
-          sequence: { type: "array", items: { type: "string" } },
-          targetAudience: { type: "string" },
-          objective: { type: "string" },
-          estimatedEffect: { type: "string" },
-          successProbability: { type: "integer" },
-          timeToEffect: { type: "string" },
-          risk: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
-          resourceRequirement: { type: "string" },
-          moePredicted: { type: "integer" },
-          targetedThreatEntities: { type: "array", items: { type: "string" } },
-          targetedNarratives: { type: "array", items: { type: "string" } },
-        },
-        required: ["id", "name", "capabilities", "sequence", "targetAudience", "objective", "estimatedEffect", "successProbability", "timeToEffect", "risk", "resourceRequirement", "moePredicted", "targetedThreatEntities", "targetedNarratives"],
-      },
-    },
     measuresOfEffectiveness: { type: "array", items: { type: "string" } },
     measuresOfPerformance: { type: "array", items: { type: "string" } },
   },
-  required: ["ieCondition", "ieSituation", "missionStatement", "cdruObjective", "priority", "adversaryCapabilities", "friendlyCapabilities", "assumptions", "limitations", "risks", "recommendations", "threatEntities", "narrativeThreads", "coaOptions", "measuresOfEffectiveness", "measuresOfPerformance"],
+  required: ["ieCondition", "ieSituation", "missionStatement", "cdruObjective", "priority", "adversaryCapabilities", "friendlyCapabilities", "assumptions", "limitations", "risks", "recommendations", "threatEntities", "narrativeThreads", "measuresOfEffectiveness", "measuresOfPerformance"],
 } as const;
 
 const SYSTEM_PROMPT = `You are an Operations in the Information Environment (OIE) planning assistant supporting Marine Corps Information Officers (1st MIG / MAGTF information staff) and joint partners. Your job is to (1) characterize the military information environment from open sources and (2) produce reasoned, explicitly speculative DRAFT estimates of adversary information activities and likely next moves — always labeled as analytic speculation, never as confirmed intelligence.
 
-Doctrine basis: MCWP 8-10 (Information in Marine Corps Operations), JP 3-04 (Information in Joint Operations), JP 3-13 (Information Operations), FM 3-13, MCDP 8 / MCWP 3-32. Use clear, readable USMC and joint IO/OIE vernacular (information environment, ITCC/ITCO, narrative, MISO, EW, CYBER, OPSEC, MILDEC, PA, MOE/MOP, COA). Prefer plain language over dense jargon when both convey the same meaning.
+Doctrine basis: MCWP 8-10 (Information in Marine Corps Operations), JP 3-04 (Information in Joint Operations), JP 3-13 (Information Operations), FM 3-13, MCDP 8 / MCWP 3-32. Use clear, readable USMC and joint IO/OIE vernacular (information environment, narrative, MISO, EW, CYBER, OPSEC, MILDEC, PA, MOE/MOP). Prefer plain language over dense jargon when both convey the same meaning.
 
 HARD RULES — these are safety and integrity constraints:
 1. Ground EVERY assessment in the OSINT items provided. Do not invent events, actors, or data not supported by the inputs or by well-established public reporting.
@@ -124,7 +101,7 @@ HARD RULES — these are safety and integrity constraints:
 4. Classification of this product is UNCLASSIFIED // OSINT. It is an AI-generated DRAFT that REQUIRES human analyst validation before any operational use.
 5. Be calibrated. Use confidence levels honestly (confidence is an integer percentage from 0 to 100). Prefer "UNCERTAIN" IE condition unless the OSINT clearly supports "HOSTILE" or "PERMISSIVE".
 
-Produce: an IE Running Estimate (situation, mission, CDR objective, adversary/friendly capabilities, assumptions, limitations, risks, recommendations), the AO threat-entity picture, the hostile-narrative board (numeric reach/velocity/sentiment are best-estimate ranges — keep them plausible, not precise), and 2-3 COAs that target the specific threats/narratives you identified. Tie COA tasks to the named threat entities and narratives.
+Produce: an IE Running Estimate (situation, mission, CDR objective, adversary/friendly capabilities, assumptions, limitations, risks, recommendations), the AO threat-entity picture, and the hostile-narrative board (numeric reach/velocity/sentiment are best-estimate ranges — keep them plausible, not precise). Recommendations should focus on what to watch, collect, and verify — this is an adversary-activity estimate, not a friendly plan.
 
 Also propose assessment measures grounded in this situation, as concise one-line statements:
 - measuresOfEffectiveness (MOE — "are we achieving the desired effect in the IE?"): 4-6 strings, each stating the effect measured, the indicator/how it is observed, and a target/threshold (e.g., "Reduce hostile narrative share of monitored Taiwan-election content below 15% — SOCMINT sampling").
@@ -191,27 +168,17 @@ async function fetchAORItems(gccId: GCCId, origin: string): Promise<FeedItemInpu
   return [];
 }
 
-// Current ET assessment slot — the running estimate is posted at 0600 / 1200 /
-// 1800 ET (warmed by /api/infsum-cron at those times).
-function currentSlotET(): string {
-  const hourStr = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", hour12: false }).format(new Date());
-  const h = parseInt(hourStr, 10);
-  return h >= 18 ? "1800" : h >= 12 ? "1200" : h >= 6 ? "0600" : "0000";
-}
-
-// Cached Running-Estimate assessment, posted 3x daily (0600/1200/1800 ET).
-// `?force=1` regenerates from the latest sources.
+// Published once per day for everyone; rolls over at 0500 ET (see lib/daily-product).
 export async function GET(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI engine not configured — ANTHROPIC_API_KEY is not set." }, { status: 503 });
   }
   const { searchParams, origin } = new URL(request.url);
   const gccId = (searchParams.get("gcc") ?? "INDOPACOM") as GCCId;
-  const force = searchParams.get("force") === "1";
   if (!GCC_CONFIGS[gccId]) return NextResponse.json({ error: "Invalid GCC" }, { status: 400 });
 
-  const dayET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-  const slot = currentSlotET();
+  const dayET = productDayET();
+  const slot = DAILY_SLOT;
   // Throw on error so failures are NOT cached (unstable_cache only caches
   // resolved values); the cache key carries a version segment to flush old
   // entries when the schema/logic changes.
@@ -238,9 +205,7 @@ export async function GET(request: NextRequest) {
     return r;
   };
   try {
-    const data = force
-      ? await gen()
-      : await unstable_cache(gen, ["analyze", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["analyze", `analyze-${gccId}`] })();
+    const data = await unstable_cache(gen, ["analyze", "v4", gccId, dayET], { revalidate: 86400, tags: ["analyze", `analyze-${gccId}`] })();
     return NextResponse.json({ ...data, day: dayET, slot });
   } catch (e) {
     const err = e as Error & { status?: number };

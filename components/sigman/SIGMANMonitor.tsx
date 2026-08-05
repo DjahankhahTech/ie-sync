@@ -7,10 +7,10 @@ import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
 // SIGMAN Monitor — open-source signature/OPSEC self-assessment. Scans the live
 // OSINT for what is being revealed about FRIENDLY (US/allied) force posture that
 // an adversary could exploit. Powered by /api/sigman (Claude). UNCLASS // OSINT.
-// Posted 3x daily (0600/1200/1800 ET), server-cached, and prefetched in the
+// Published once daily (0500 ET), server-cached, and prefetched in the
 // background on app load so it's ready before the user opens this tab.
 
-const SLOT_LABEL: Record<string, string> = { "0600": "0600 ET", "1200": "1200 ET", "1800": "1800 ET", "0000": "overnight" };
+const SLOT_LABEL: Record<string, string> = { "0500": "daily 0500 ET", "0600": "0600 ET", "1200": "1200 ET", "1800": "1800 ET", "0000": "overnight" };
 
 const riskColor = (r: string) => (r === "CRITICAL" ? "#ef4444" : r === "HIGH" ? "#f59e0b" : r === "MEDIUM" ? "#eab308" : "#10b981");
 const postureColor = (p: string) => (p === "HIGH" ? "#ef4444" : p === "ELEVATED" ? "#f59e0b" : p === "MODERATE" ? "#eab308" : "#10b981");
@@ -24,9 +24,8 @@ const catHint: Record<string, string> = {
 
 export function SIGMANMonitor() {
   // SIGMAN result lives in the store (prefetched in background; cleared on AOR
-  // switch). `scan(true)` re-scans from the latest sources.
+  // switch). The scan is published once daily at 0500 ET — same for everyone.
   const { activeGCC, sigman: result, sigmanLoading: loading, sigmanError: error, loadSigman } = useIEStore();
-  const scan = (force = false) => loadSigman(activeGCC, force);
 
   // Ensure the scan is loaded if the background prefetch hasn't; guarded so it
   // won't double-fetch.
@@ -48,16 +47,12 @@ export function SIGMANMonitor() {
           <div>
             <div className="text-[#00d4ff] text-sm font-black tracking-widest">SIGNATURE MANAGEMENT (SIGMAN) — WHAT WE&apos;RE GIVING AWAY</div>
             <div className="text-[#475569] text-xs">
-              A signature is anything observable — radio emissions, posted photos, ship movements, patterns — that tells an adversary where friendly (US/allied) forces are or what they&apos;re about to do. This scan checks open-source news for those giveaways. Powered by Claude over the live OSINT feed. Auto-updated 0600 / 1200 / 1800 ET; refresh for the latest sources.
+              A signature is anything observable — radio emissions, posted photos, ship movements, patterns — that tells an adversary where friendly (US/allied) forces are or what they&apos;re about to do. This scan checks open-source news for those giveaways. Powered by Claude over the live OSINT feed. Published once daily at 0500 Eastern — every viewer sees the same day's scan.
             </div>
           </div>
-          <button
-            onClick={() => scan(true)}
-            disabled={loading}
-            className="px-4 py-2 text-xs bg-[#1e3a5f] border border-[#00d4ff] text-[#00d4ff] rounded hover:bg-[#00d4ff15] disabled:opacity-50 font-bold tracking-wider"
-          >
-            {loading ? "SCANNING OSINT…" : "↻ REFRESH (LATEST SOURCES)"}
-          </button>
+          <span className="px-4 py-2 text-xs border border-[#1e3a5f] text-[#475569] rounded font-bold tracking-wider">
+            {loading ? "LOADING TODAY'S SCAN…" : "DAILY PRODUCT · 0500 ET"}
+          </span>
         </div>
         {error && <div className="mt-3 p-2 border border-[#ef4444] bg-[#ef444410] rounded text-[11px] text-[#ef4444] font-mono">✗ {error}</div>}
         {result && (
@@ -72,7 +67,7 @@ export function SIGMANMonitor() {
         <div className="tactical-card p-8 text-center">
           <div className="text-[#1e3a5f] text-4xl mb-3">📡</div>
           <div className="text-[#475569] text-sm mb-1">No signature scan run yet</div>
-          <div className="text-[#334155] text-xs max-w-md mx-auto">Press &quot;Refresh (latest sources)&quot; above to scan today&apos;s open-source news for anything that reveals friendly-force locations, movements, installations, or patterns in this theater.</div>
+          <div className="text-[#334155] text-xs max-w-md mx-auto">Today&apos;s scan loads automatically. It checks open-source news once per day for anything that reveals friendly-force locations, movements, installations, or patterns in this theater.</div>
         </div>
       )}
 

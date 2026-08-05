@@ -3,14 +3,13 @@
 import { useIEStore } from "@/store/ie-store";
 import { cn } from "@/lib/utils";
 
-/** Clear, plain-language modules ordered for IE capture → adversary analysis → planning. */
+/** Clear, plain-language modules ordered as the IO's daily read: news → OSINT → adversary → reference. */
 const modules: { id: string; label: string; hint: string }[] = [
   { id: "home", label: "Home", hint: "Purpose & how to use" },
-  { id: "cop", label: "Information Environment", hint: "Picture of the IE" },
+  { id: "cop", label: "Information Environment", hint: "Daily summary, news, and themes" },
   { id: "ie-map", label: "Map", hint: "Layers & locations" },
   { id: "sensor-fusion", label: "Live OSINT", hint: "Open-source feeds" },
-  { id: "running-estimate", label: "Adversary Estimate", hint: "What they may do next" },
-  { id: "io-planner", label: "Plan the Response", hint: "Build the COA, annex, and tasking order" },
+  { id: "running-estimate", label: "Adversary Narrative", hint: "What anti-US audiences are reading" },
   { id: "sigman", label: "Signatures", hint: "Friendly exposure" },
   { id: "doctrine", label: "Public Doctrine", hint: "Open research links" },
   { id: "s-and-t", label: "S&T", hint: "Research resources" },
@@ -37,7 +36,7 @@ export function Sidebar() {
               IE-SYNC
             </div>
             <div className="text-[12px] text-[var(--muted)] mt-0.5 truncate">
-              Capture the information environment · Speculate on adversary action
+              OSINT · Doctrine · News · Adversary narrative · S&T — one source for information officers
             </div>
           </div>
         </div>

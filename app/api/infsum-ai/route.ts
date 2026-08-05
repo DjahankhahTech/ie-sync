@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { DAILY_SLOT, productDayET } from "@/lib/daily-product";
 import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
@@ -8,7 +9,7 @@ import { deriveInfsumMetrics, recordSnapshot } from "@/lib/history-store";
 
 // AI-generated executive Daily Information Summary (INFSUM). Generated once per
 // ET-day and cached (Vercel Data Cache) so it does NOT regenerate on every page
-// refresh; the /api/infsum-cron job warms it at 06:00 ET daily. Synthesizes the
+// refresh; the /api/infsum-cron job warms it at 0500 ET daily. Synthesizes the
 // live OSINT into a commander's read + linked references.
 // UNCLASSIFIED // OSINT — AI DRAFT, requires human analyst validation.
 
@@ -99,12 +100,7 @@ Write the Daily Information Summary for this AOR, grounded in the OSINT above.`;
   };
 }
 
-// Current ET slot — the summary is posted at 0600 / 1200 / 1800 ET.
-function currentSlotET(): string {
-  const hourStr = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", hour12: false }).format(new Date());
-  const h = parseInt(hourStr, 10);
-  return h >= 18 ? "1800" : h >= 12 ? "1200" : h >= 6 ? "0600" : "0000";
-}
+// Published once per day for everyone; rolls over at 0500 ET (see lib/daily-product).
 
 export async function GET(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -112,13 +108,12 @@ export async function GET(request: NextRequest) {
   }
   const { searchParams, origin } = new URL(request.url);
   const gccId = (searchParams.get("gcc") ?? "INDOPACOM") as GCCId;
-  const force = searchParams.get("force") === "1";
   if (!GCC_CONFIGS[gccId]) return NextResponse.json({ error: "Invalid GCC" }, { status: 400 });
 
-  // Posted 3x daily (0600/1200/1800 ET); cache key includes the slot + a version
+  // Published once daily (0500 ET rollover); cache key is the product day + a version
   // segment. Throw on error so failures are not cached.
-  const dayET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-  const slot = currentSlotET();
+  const dayET = productDayET();
+  const slot = DAILY_SLOT;
   const gen = async () => {
     const r = await generate(gccId, origin);
     if (r.error) throw new Error(String(r.error));
@@ -140,11 +135,11 @@ export async function GET(request: NextRequest) {
     });
     return r;
   };
-  const cached = unstable_cache(gen, ["infsum-ai", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["infsum-ai", `infsum-ai-${gccId}`] });
+  const cached = unstable_cache(gen, ["infsum-ai", "v4", gccId, dayET], { revalidate: 86400, tags: ["infsum-ai", `infsum-ai-${gccId}`] });
 
   try {
-    const data = force ? await gen() : await cached();
-    return NextResponse.json({ ...data, day: dayET, slot, cached: !force });
+    const data = await cached();
+    return NextResponse.json({ ...data, day: dayET, slot, cached: true });
   } catch (err) {
     const msg = err instanceof Anthropic.APIError ? err.message : err instanceof Error ? err.message : "AI engine error";
     return NextResponse.json({ error: msg }, { status: 502 });

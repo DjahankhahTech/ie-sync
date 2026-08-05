@@ -3,21 +3,17 @@
 import { create } from "zustand";
 import {
   type SensorFeed,
-  type COAOption,
   type MOEMetric,
   type MOPMetric,
   type SignatureItem,
   type ThreatEntity,
   type NarrativeThread,
   type RunningEstimate,
-  type IOPlannerStep,
-  type IOPlan,
 } from "@/lib/mock-data";
 import { type GCCId } from "@/lib/gcc-config";
 import { emptyOperationalState } from "@/lib/empty-state";
 import { type LiveFeedItem } from "@/app/api/feeds/route";
 import { type DailyINFSUM } from "@/app/api/infsum/route";
-import { type MediaFeedItem } from "@/app/api/media-feeds/route";
 
 interface Alert {
   id: string;
@@ -51,11 +47,6 @@ interface IEState {
   anomalyCount: number;
   markFeedProcessed: (id: string) => void;
 
-  // COA
-  coaOptions: COAOption[];
-  selectedCOA: string | null;
-  setSelectedCOA: (id: string | null) => void;
-
   // MOE/MOP
   moeMetrics: MOEMetric[];
   mopMetrics: MOPMetric[];
@@ -77,19 +68,19 @@ interface IEState {
   // AI-proposed potential measures (one-line statements, populated after an assessment)
   suggestedMOE: string[];
   suggestedMOP: string[];
-  generateAssessment: (gcc: GCCId, force?: boolean) => Promise<void>;
+  generateAssessment: (gcc: GCCId) => Promise<void>;
 
-  // AI Executive Summary (INFSUM) — posted 3x daily, prefetched in background
+  // AI Executive Summary (INFSUM) — published once daily (0500 ET), prefetched in background
   aiSummary: AISummaryResult | null;
   aiSummaryLoading: boolean;
   aiSummaryError: string | null;
-  loadAISummary: (gcc: GCCId, force?: boolean) => Promise<void>;
+  loadAISummary: (gcc: GCCId) => Promise<void>;
 
-  // SIGMAN open-source OPSEC scan — posted 3x daily, prefetched in background
+  // SIGMAN open-source OPSEC scan — published once daily (0500 ET), prefetched in background
   sigman: SigmanResult | null;
   sigmanLoading: boolean;
   sigmanError: string | null;
-  loadSigman: (gcc: GCCId, force?: boolean) => Promise<void>;
+  loadSigman: (gcc: GCCId) => Promise<void>;
 
   // Warm all three AI products (assessment, INFSUM summary, SIGMAN) for an AOR
   // in the background so tabs open already-populated (no first-visit spinner).
@@ -121,24 +112,6 @@ interface IEState {
   setINFSUMLoading: (loading: boolean) => void;
   setINFSUMError: (err: string | null) => void;
 
-  // Media feeds (video/image)
-  mediaFeeds: MediaFeedItem[];
-  mediaFeedsLoading: boolean;
-  mediaFeedsError: string | null;
-  mediaFeedsFetchedAt: string | null;
-  setMediaFeeds: (feeds: MediaFeedItem[], fetchedAt: string) => void;
-  setMediaFeedsLoading: (loading: boolean) => void;
-  setMediaFeedsError: (err: string | null) => void;
-
-  // IO Planner
-  ioPlannerStep: IOPlannerStep;
-  ioPlannerMode: "builder" | "compare" | "documents";
-  draftIOPlan: Partial<IOPlan>;
-  setIOPlannerStep: (step: IOPlannerStep) => void;
-  setIOPlannerMode: (mode: "builder" | "compare" | "documents") => void;
-  updateDraftIOPlan: (updates: Partial<IOPlan>) => void;
-  resetDraftIOPlan: () => void;
-  addBuilderCOA: (coa: COAOption) => void;
 
   // System status
   lastRefresh: string;
@@ -224,11 +197,8 @@ export const useIEStore = create<IEState>((set, get) => ({
       liveFeedsFetchedAt: null,
       infsum: null,
       infsumFetchedAt: null,
-      mediaFeeds: [],
-      mediaFeedsFetchedAt: null,
       feeds: data.sensorFeeds,
       anomalyCount: data.sensorFeeds.filter((f) => f.anomaly).length,
-      coaOptions: data.coaOptions,
       moeMetrics: data.moeMetrics,
       mopMetrics: data.mopMetrics,
       threatEntities: data.threatEntities,
@@ -236,10 +206,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       runningEstimate: data.runningEstimate,
       signatureItems: data.signatureItems,
       alerts: buildAlertsForGCC(gcc),
-      selectedCOA: null,
-      ioPlannerStep: "target-audiences" as IOPlannerStep,
-      ioPlannerMode: "builder" as const,
-      draftIOPlan: {},
     });
   },
 
@@ -259,10 +225,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       feeds: state.feeds.map((f) => (f.id === id ? { ...f, processed: true } : f)),
     })),
 
-  coaOptions: initialData.coaOptions,
-  selectedCOA: null,
-  setSelectedCOA: (id) => set({ selectedCOA: id }),
-
   moeMetrics: initialData.moeMetrics,
   mopMetrics: initialData.mopMetrics,
 
@@ -278,12 +240,11 @@ export const useIEStore = create<IEState>((set, get) => ({
   assessmentError: null,
   suggestedMOE: [],
   suggestedMOP: [],
-  generateAssessment: async (gcc, force) => {
+  generateAssessment: async (gcc) => {
     set({ assessmentLoading: true, assessmentError: null });
     try {
       // Cached daily assessment (server fetches OSINT + caches per ET-day);
-      // force=1 regenerates from the latest sources.
-      const res = await fetch(`/api/analyze?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const res = await fetch(`/api/analyze?gcc=${gcc}`);
       const json = await res.json();
       if (!res.ok || json.error || !json.assessment) {
         set({ assessmentLoading: false, assessmentError: json.error ?? `Assessment failed (${res.status})` });
@@ -316,8 +277,6 @@ export const useIEStore = create<IEState>((set, get) => ({
         (n: Omit<NarrativeThread, "id">, i: number) => ({ ...n, id: `NT-${gcc}-${i + 1}` })
       );
 
-      const coaOptions: COAOption[] = (a.coaOptions ?? []).map((c: COAOption) => ({ ...c }));
-
       const runningEstimate: RunningEstimate = {
         classification: json.classification ?? "UNCLASSIFIED // OSINT",
         dtg: nowDtg,
@@ -338,7 +297,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       set({
         threatEntities,
         narrativeThreads,
-        coaOptions,
         runningEstimate,
         suggestedMOE: Array.isArray(a.measuresOfEffectiveness) ? a.measuresOfEffectiveness : [],
         suggestedMOP: Array.isArray(a.measuresOfPerformance) ? a.measuresOfPerformance : [],
@@ -360,10 +318,10 @@ export const useIEStore = create<IEState>((set, get) => ({
   aiSummary: null,
   aiSummaryLoading: false,
   aiSummaryError: null,
-  loadAISummary: async (gcc, force) => {
+  loadAISummary: async (gcc) => {
     set({ aiSummaryLoading: true, aiSummaryError: null });
     try {
-      const r = await fetch(`/api/infsum-ai?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const r = await fetch(`/api/infsum-ai?gcc=${gcc}`);
       const j = await r.json();
       if (!r.ok || j.error || !j.summary) {
         set({ aiSummaryLoading: false, aiSummaryError: j.error ?? `Summary unavailable (${r.status})` });
@@ -378,10 +336,10 @@ export const useIEStore = create<IEState>((set, get) => ({
   sigman: null,
   sigmanLoading: false,
   sigmanError: null,
-  loadSigman: async (gcc, force) => {
+  loadSigman: async (gcc) => {
     set({ sigmanLoading: true, sigmanError: null });
     try {
-      const r = await fetch(`/api/sigman?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const r = await fetch(`/api/sigman?gcc=${gcc}`);
       const j = await r.json();
       if (!r.ok || j.error || !j.assessment) {
         set({ sigmanLoading: false, sigmanError: j.error ?? `Scan unavailable (${r.status})` });
@@ -446,26 +404,6 @@ export const useIEStore = create<IEState>((set, get) => ({
   setINFSUMLoading: (loading) => set({ infsumLoading: loading }),
   setINFSUMError: (err) => set({ infsumError: err, infsumLoading: false }),
 
-  mediaFeeds: [],
-  mediaFeedsLoading: false,
-  mediaFeedsError: null,
-  mediaFeedsFetchedAt: null,
-  setMediaFeeds: (feeds, fetchedAt) =>
-    set({ mediaFeeds: feeds, mediaFeedsFetchedAt: fetchedAt, mediaFeedsLoading: false, mediaFeedsError: null }),
-  setMediaFeedsLoading: (loading) => set({ mediaFeedsLoading: loading }),
-  setMediaFeedsError: (err) => set({ mediaFeedsError: err, mediaFeedsLoading: false }),
-
-  ioPlannerStep: "target-audiences" as IOPlannerStep,
-  ioPlannerMode: "builder" as const,
-  draftIOPlan: {},
-  setIOPlannerStep: (step) => set({ ioPlannerStep: step }),
-  setIOPlannerMode: (mode) => set({ ioPlannerMode: mode }),
-  updateDraftIOPlan: (updates) =>
-    set((state) => ({ draftIOPlan: { ...state.draftIOPlan, ...updates } })),
-  resetDraftIOPlan: () =>
-    set({ draftIOPlan: {}, ioPlannerStep: "target-audiences" as IOPlannerStep }),
-  addBuilderCOA: (coa) =>
-    set((state) => ({ coaOptions: [...state.coaOptions, coa] })),
 
   lastRefresh: new Date().toISOString(),
   systemStatus: "ONLINE",

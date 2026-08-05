@@ -38,21 +38,23 @@ export function layerOf(e: ThreatEntity & { layer?: IELayer }): IELayer {
 
 const D = "2025-12-01T00:00Z"; // reference "last seen" — historical, not live
 
-// ── Verified source URLs (checked 2026-06-18) ──────────────────────────────
+// ── Verified source URLs (re-checked 2026-08-04: every URL must be freely
+// accessible — no paywalls, no registration walls, no dead redirects) ───────
 const SRC = {
   MITRE_APT41: { url: "https://attack.mitre.org/groups/G0096/", label: "MITRE ATT&CK G0096" },
   MITRE_APT28: { url: "https://attack.mitre.org/groups/G0007/", label: "MITRE ATT&CK G0007" },
   MITRE_MAGICHOUND: { url: "https://attack.mitre.org/groups/G0059/", label: "MITRE ATT&CK G0059" },
   CISA_VOLT: { url: "https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a", label: "CISA AA24-038A" },
   CISA_SALT: { url: "https://www.cisa.gov/resources-tools/resources/enhanced-visibility-and-hardening-guidance-communications-infrastructure", label: "CISA/FBI/NSA Dec 2024" },
-  MANDIANT_DRAGONBRIDGE: { url: "https://www.mandiant.com/resources/blog/prc-dragonbridge-influence-elections", label: "Mandiant — DRAGONBRIDGE" },
-  MANDIANT_GHOSTWRITER: { url: "https://www.mandiant.com/resources/unc1151-ghostwriter-update-report", label: "Mandiant — UNC1151/Ghostwriter" },
+  MANDIANT_DRAGONBRIDGE: { url: "https://cloud.google.com/blog/topics/threat-intelligence/prc-dragonbridge-influence-elections", label: "Mandiant/Google TI — DRAGONBRIDGE" },
+  MANDIANT_GHOSTWRITER: { url: "https://cloud.google.com/blog/topics/threat-intelligence/ghostwriter-influence-campaign", label: "Mandiant/Google TI — UNC1151/Ghostwriter" },
   MANDIANT_TI: { url: "https://cloud.google.com/blog/topics/threat-intelligence/", label: "Mandiant / Google Threat Intel" },
   GEC_CHINA: { url: "https://2021-2025.state.gov/gec-special-report-how-the-peoples-republic-of-china-seeks-to-reshape-the-global-information-environment/", label: "US State Dept GEC 2023" },
   GEC_RUSSIA: { url: "https://2021-2025.state.gov/gec-special-report-russias-pillars-of-disinformation-and-propaganda/", label: "US State Dept GEC" },
   GEC_AFRICA: { url: "https://2021-2025.state.gov/the-kremlins-efforts-to-spread-deadly-disinformation-in-africa/", label: "US State Dept GEC" },
   DOJ_DOPPELGANGER: { url: "https://www.justice.gov/archives/opa/pr/justice-department-disrupts-covert-russian-government-sponsored-foreign-malign-influence", label: "DOJ Sep 2024" },
-  IISS_ISF: { url: "https://www.iiss.org/online-analysis/online-analysis/2024/05/chinas-new-information-support-force/", label: "IISS 2024" },
+  // Jamestown China Brief (free) replaced the IISS analysis, which sits behind a registration wall.
+  IISS_ISF: { url: "https://jamestown.org/a-disturbance-in-the-force-the-reorganization-of-peoples-liberation-army-command-and-elimination-of-chinas-strategic-support-force/", label: "Jamestown China Brief" },
   CSIS_CHINAPOWER: { url: "https://chinapower.csis.org/", label: "CSIS ChinaPower" },
   RAND_EW: { url: "https://www.rand.org/topics/electronic-warfare.html", label: "RAND — Electronic Warfare" },
   WASHINST: { url: "https://www.washingtoninstitute.org/", label: "Washington Institute" },
@@ -60,8 +62,8 @@ const SRC = {
   MITRE_LAZARUS: { url: "https://attack.mitre.org/groups/G0032/", label: "MITRE ATT&CK G0032" },
   MITRE_SANDWORM: { url: "https://attack.mitre.org/groups/G0034/", label: "MITRE ATT&CK G0034" },
   MITRE_APT29: { url: "https://attack.mitre.org/groups/G0016/", label: "MITRE ATT&CK G0016" },
-  CSIS_SPACE: { url: "https://aerospace.csis.org/space-threat-assessment/", label: "CSIS Space Threat Assessment" },
-  SWF_SPACE: { url: "https://swfound.org/counterspace/", label: "Secure World Foundation — Counterspace" },
+  CSIS_SPACE: { url: "https://www.csis.org/analysis/space-threat-assessment-2025", label: "CSIS Space Threat Assessment 2025" },
+  SWF_SPACE: { url: "https://www.swfound.org/publications-and-reports/2026-global-counterspace-capabilities-report", label: "SWF Global Counterspace Report" },
 } as const;
 
 const INDOPACOM: LibraryThreat[] = [

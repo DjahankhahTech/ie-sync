@@ -8,7 +8,6 @@ import { ClassificationBanner } from "./ClassificationBanner";
 import { IEOverlay } from "@/components/cop/IEOverlay";
 import { IEMapTab } from "@/components/cop/IEMapTab";
 import { RunningEstimateModule } from "@/components/running-estimate/RunningEstimate";
-import { IOPlanner } from "@/components/io-planner/IOPlanner";
 import { SIGMANMonitor } from "@/components/sigman/SIGMANMonitor";
 import { SensorFusion } from "@/components/sensor-fusion/SensorFusion";
 import { STTab } from "@/components/st/STTab";
@@ -21,7 +20,6 @@ const moduleMap: Record<string, React.ComponentType> = {
   "ie-map": IEMapTab,
   "running-estimate": RunningEstimateModule,
   "sensor-fusion": SensorFusion,
-  "io-planner": IOPlanner,
   sigman: SIGMANMonitor,
   "s-and-t": STTab,
   doctrine: DoctrineLibrary,
@@ -32,7 +30,7 @@ export function AppShell() {
   const ActiveComponent = moduleMap[activeModule] ?? DoctrinalOverview;
 
   // Warm the day's AI products (Running Estimate, INFSUM summary, SIGMAN) in the
-  // background as soon as the app loads / AOR changes — they're posted 3x daily
+  // background as soon as the app loads / AOR changes — they're published once daily
   // (0600/1200/1800 ET) and server-cached, so this is a fast cache hit and tabs
   // open already-populated (no first-visit loading spinner).
   useEffect(() => {
