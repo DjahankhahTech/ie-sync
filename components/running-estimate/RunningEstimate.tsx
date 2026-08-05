@@ -165,11 +165,11 @@ export function RunningEstimateModule() {
     <div className="page-scroll page-scroll-wide">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Adversary estimate</h1>
+          <h1 className="page-title">Adversary activity</h1>
           <p className="page-subtitle">
-            Draft speculation on adversary activity and likely next moves in the information
-            environment — grounded in open-source reporting. Review, challenge, and revise
-            before any briefing.
+            Known actors, hostile narratives, and draft speculation on likely next moves in
+            the information environment — grounded in open-source reporting. Review,
+            challenge, and revise before any briefing.
           </p>
         </div>
       </header>
@@ -180,8 +180,8 @@ export function RunningEstimateModule() {
           <div>
             <h2 className="panel-title">Generate from live OSINT</h2>
             <p className="text-[14px] text-muted m-0 mt-1 max-w-2xl">
-              Drafts the estimate, threat picture, hostile narratives, and course-of-action (COA)
-              options from open sources. Cached daily; refresh pulls the latest articles.
+              Drafts the estimate, threat picture, and hostile narratives from open sources.
+              Cached daily; refresh pulls the latest articles.
             </p>
           </div>
           <button

@@ -8,7 +8,7 @@ import { DOCTRINE_LIBRARY_PROMPT } from "@/lib/military-library";
 
 // AI assessment engine. Takes REAL ingested OSINT (from /api/feeds) and uses
 // Claude to draft doctrinally-grounded OIE planning products: an IE Running
-// Estimate, the AO threat picture, hostile-narrative analysis, and COAs.
+// Estimate, the AO threat picture, and hostile-narrative analysis.
 //
 // Everything it returns is an UNCLASSIFIED // OSINT-derived AI DRAFT and is
 // marked as requiring human analyst validation before operational use. The
@@ -83,39 +83,15 @@ const ASSESSMENT_SCHEMA = {
         required: ["title", "platform", "sentiment", "reach", "velocity", "adversarial", "summary", "trend"],
       },
     },
-    coaOptions: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          id: { type: "string" },
-          name: { type: "string" },
-          capabilities: { type: "array", items: { type: "string", enum: ["MISO", "CYBER", "EW", "DECEPTION", "OPSEC", "MILDEC", "PA"] } },
-          sequence: { type: "array", items: { type: "string" } },
-          targetAudience: { type: "string" },
-          objective: { type: "string" },
-          estimatedEffect: { type: "string" },
-          successProbability: { type: "integer" },
-          timeToEffect: { type: "string" },
-          risk: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
-          resourceRequirement: { type: "string" },
-          moePredicted: { type: "integer" },
-          targetedThreatEntities: { type: "array", items: { type: "string" } },
-          targetedNarratives: { type: "array", items: { type: "string" } },
-        },
-        required: ["id", "name", "capabilities", "sequence", "targetAudience", "objective", "estimatedEffect", "successProbability", "timeToEffect", "risk", "resourceRequirement", "moePredicted", "targetedThreatEntities", "targetedNarratives"],
-      },
-    },
     measuresOfEffectiveness: { type: "array", items: { type: "string" } },
     measuresOfPerformance: { type: "array", items: { type: "string" } },
   },
-  required: ["ieCondition", "ieSituation", "missionStatement", "cdruObjective", "priority", "adversaryCapabilities", "friendlyCapabilities", "assumptions", "limitations", "risks", "recommendations", "threatEntities", "narrativeThreads", "coaOptions", "measuresOfEffectiveness", "measuresOfPerformance"],
+  required: ["ieCondition", "ieSituation", "missionStatement", "cdruObjective", "priority", "adversaryCapabilities", "friendlyCapabilities", "assumptions", "limitations", "risks", "recommendations", "threatEntities", "narrativeThreads", "measuresOfEffectiveness", "measuresOfPerformance"],
 } as const;
 
 const SYSTEM_PROMPT = `You are an Operations in the Information Environment (OIE) planning assistant supporting Marine Corps Information Officers (1st MIG / MAGTF information staff) and joint partners. Your job is to (1) characterize the military information environment from open sources and (2) produce reasoned, explicitly speculative DRAFT estimates of adversary information activities and likely next moves — always labeled as analytic speculation, never as confirmed intelligence.
 
-Doctrine basis: MCWP 8-10 (Information in Marine Corps Operations), JP 3-04 (Information in Joint Operations), JP 3-13 (Information Operations), FM 3-13, MCDP 8 / MCWP 3-32. Use clear, readable USMC and joint IO/OIE vernacular (information environment, ITCC/ITCO, narrative, MISO, EW, CYBER, OPSEC, MILDEC, PA, MOE/MOP, COA). Prefer plain language over dense jargon when both convey the same meaning.
+Doctrine basis: MCWP 8-10 (Information in Marine Corps Operations), JP 3-04 (Information in Joint Operations), JP 3-13 (Information Operations), FM 3-13, MCDP 8 / MCWP 3-32. Use clear, readable USMC and joint IO/OIE vernacular (information environment, narrative, MISO, EW, CYBER, OPSEC, MILDEC, PA, MOE/MOP). Prefer plain language over dense jargon when both convey the same meaning.
 
 HARD RULES — these are safety and integrity constraints:
 1. Ground EVERY assessment in the OSINT items provided. Do not invent events, actors, or data not supported by the inputs or by well-established public reporting.
@@ -124,7 +100,7 @@ HARD RULES — these are safety and integrity constraints:
 4. Classification of this product is UNCLASSIFIED // OSINT. It is an AI-generated DRAFT that REQUIRES human analyst validation before any operational use.
 5. Be calibrated. Use confidence levels honestly (confidence is an integer percentage from 0 to 100). Prefer "UNCERTAIN" IE condition unless the OSINT clearly supports "HOSTILE" or "PERMISSIVE".
 
-Produce: an IE Running Estimate (situation, mission, CDR objective, adversary/friendly capabilities, assumptions, limitations, risks, recommendations), the AO threat-entity picture, the hostile-narrative board (numeric reach/velocity/sentiment are best-estimate ranges — keep them plausible, not precise), and 2-3 COAs that target the specific threats/narratives you identified. Tie COA tasks to the named threat entities and narratives.
+Produce: an IE Running Estimate (situation, mission, CDR objective, adversary/friendly capabilities, assumptions, limitations, risks, recommendations), the AO threat-entity picture, and the hostile-narrative board (numeric reach/velocity/sentiment are best-estimate ranges — keep them plausible, not precise). Recommendations should focus on what to watch, collect, and verify — this is an adversary-activity estimate, not a friendly plan.
 
 Also propose assessment measures grounded in this situation, as concise one-line statements:
 - measuresOfEffectiveness (MOE — "are we achieving the desired effect in the IE?"): 4-6 strings, each stating the effect measured, the indicator/how it is observed, and a target/threshold (e.g., "Reduce hostile narrative share of monitored Taiwan-election content below 15% — SOCMINT sampling").

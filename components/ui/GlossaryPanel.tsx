@@ -15,9 +15,7 @@ interface GlossaryPanelProps {
     | "cop"
     | "sensor-fusion"
     | "running-estimate"
-    | "coa"
-    | "sigman"
-    | "annex";
+    | "sigman";
   /** Optional override label for the panel header */
   title?: string;
 }
@@ -69,7 +67,7 @@ const UNIVERSAL_TERMS: GlossaryEntry[] = [
   {
     term: "Annex I",
     definition:
-      "Annex I (Information) to an OPORD/OPLAN — the staff annex that describes how information activities support the operation. IE-SYNC drafts Annex I language from the planner worksheet and AO picture.",
+      "Annex I (Information) to an OPORD/OPLAN — the staff annex that describes how information activities support the operation.",
     category: "Doctrine",
   },
   {
@@ -476,81 +474,6 @@ const MODULE_TERMS: Record<string, GlossaryEntry[]> = {
     },
   ],
 
-  coa: [
-    {
-      term: "COA",
-      definition:
-        "Course of Action — a plan that meets the commander's intent and the mission's requirements. In IO planning, COAs represent different combinations of capabilities and sequencing to achieve IE effects.",
-      category: "Military",
-    },
-    {
-      term: "Success Probability",
-      definition:
-        "An analytic estimate (0–100%) of the likelihood that a COA will achieve its intended IO effects, based on available intelligence, adversary capabilities, and historical data.",
-      category: "Analysis",
-    },
-    {
-      term: "Time to Effect",
-      definition:
-        "The estimated time required for a COA to produce observable, measurable results in the Information Environment after execution begins.",
-      category: "IO Core",
-    },
-    {
-      term: "Risk Level",
-      definition:
-        "The potential negative consequences of a COA: LOW = minimal risk of escalation or failure; MEDIUM = some risk requiring mitigation; HIGH = significant risk requiring commander-level approval.",
-      category: "Military",
-    },
-    {
-      term: "MOE Predicted",
-      definition:
-        "The forecasted Measure of Effectiveness score a COA is expected to achieve if successfully executed — used to compare COA options.",
-      category: "IO Core",
-    },
-    {
-      term: "Target Audience",
-      definition:
-        "The specific group of individuals, organizations, or systems that an IO action is designed to influence, inform, or affect.",
-      category: "IO Core",
-    },
-    {
-      term: "MILDEC",
-      definition:
-        "Military Deception — actions executed to deliberately mislead adversary decision-makers as to friendly military capabilities, intentions, and operations.",
-      category: "IO Core",
-    },
-    {
-      term: "OPSEC",
-      definition:
-        "Operations Security — a process that identifies critical information and analyzes friendly actions to identify those that can be observed by adversary intelligence systems and can be interpreted to derive friendly COAs.",
-      category: "IO Core",
-    },
-    {
-      term: "PA",
-      definition:
-        "Public Affairs — communications with internal and external audiences (media, public, Congress) that provide truthful information about military activities. Distinct from MISO — PA does not target foreign audiences for behavioral change.",
-      category: "IO Core",
-    },
-    {
-      term: "CYBER (Capability)",
-      definition:
-        "Cyberspace Operations — activities to operate in, defend, and project power through cyberspace. Includes DCO (defensive) and OCO (offensive) actions authorized under specific legal authorities.",
-      category: "Cyber",
-    },
-    {
-      term: "DECEPTION",
-      definition:
-        "IO activity designed to cause adversaries to take, or fail to take, specific actions by manipulating their decision-making through false information, feints, or demonstrations.",
-      category: "IO Core",
-    },
-    {
-      term: "Resource Requirement",
-      definition:
-        "The specific assets, personnel, authorities, and platforms needed to execute a COA. Commanders weigh these against availability when selecting a course of action.",
-      category: "Military",
-    },
-  ],
-
   sigman: [
     {
       term: "SIGMAN",
@@ -626,80 +549,6 @@ const MODULE_TERMS: Record<string, GlossaryEntry[]> = {
     },
   ],
 
-  annex: [
-    {
-      term: "Annex C (IO)",
-      definition:
-        "The Information Operations annex to a military operations order — the formal planning document that details IO objectives, tasks, coordinating instructions, and resource requirements for all IO activities.",
-      category: "Military",
-    },
-    {
-      term: "OPORD",
-      definition:
-        "Operations Order — a directive issued by a commander to subordinate commanders for the purpose of effecting the coordinated execution of an operation.",
-      category: "Military",
-    },
-    {
-      term: "EXORD",
-      definition:
-        "Execute Order — a command directive from the National Command Authority or combatant commander that authorizes and directs specific military operations to begin.",
-      category: "Military",
-    },
-    {
-      term: "FRAGO",
-      definition:
-        "Fragmentary Order — an abbreviated form of an operations order issued as needed to change or modify an existing order or plan.",
-      category: "Military",
-    },
-    {
-      term: "IO Annex",
-      definition:
-        "The IO-specific portion of an OPORD or OPLAN that provides detailed guidance on all Information Operations activities supporting the main operation.",
-      category: "Military",
-    },
-    {
-      term: "LOAC / ROE",
-      definition:
-        "Law of Armed Conflict / Rules of Engagement — legal frameworks governing the conduct of military operations including IO activities. All IO actions must comply with LOAC and approved ROE.",
-      category: "Legal",
-    },
-    {
-      term: "Title 10 / Title 50",
-      definition:
-        "US legal authorities: Title 10 (USC) governs military operations including cyberspace. Title 50 governs intelligence activities. Both apply to IO and cyber operations — legal review required.",
-      category: "Legal",
-    },
-    {
-      term: "Phase",
-      definition:
-        "A distinct period of an operation with specific objectives and tasks. IO plans are phased to align with the overall operational timeline: Phase 0 (Shape), I (Deter), II (Seize), III (Dominate), IV (Stabilize).",
-      category: "Military",
-    },
-    {
-      term: "CONOP",
-      definition:
-        "Concept of Operations — a statement that directs the manner in which a series of actions will be employed to accomplish a mission. IO CONOPs detail the specific sequence of IO activities.",
-      category: "Military",
-    },
-    {
-      term: "Coordinating Instructions",
-      definition:
-        "Directions applicable to two or more elements of a command — included in OPORD Annex C to synchronize IO activities across all units and ensure deconfliction.",
-      category: "Military",
-    },
-    {
-      term: "MISO Product",
-      definition:
-        "A specific output of Military Information Support Operations — such as a leaflet, radio broadcast, video, or social media post — designed to influence a target audience's behavior.",
-      category: "IO Core",
-    },
-    {
-      term: "Human Review Required",
-      definition:
-        "All AI-generated planning content (annexes, COAs, assessments) must be reviewed and validated by qualified human planners before submission to the commander. AI assists; humans decide.",
-      category: "Policy",
-    },
-  ],
 };
 
 // ── Category color map ────────────────────────────────────────────────

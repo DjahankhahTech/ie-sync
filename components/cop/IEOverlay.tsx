@@ -144,10 +144,7 @@ export function IEOverlay() {
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-primary" onClick={() => setActiveModule("running-estimate")}>
-          Speculate on adversary action
-        </button>
-        <button type="button" className="btn" onClick={() => setActiveModule("io-planner")}>
-          Plan response
+          Adversary activity
         </button>
         <button type="button" className="btn" onClick={() => setActiveModule("sensor-fusion")}>
           Triage OSINT

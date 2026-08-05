@@ -3,15 +3,12 @@
 import { create } from "zustand";
 import {
   type SensorFeed,
-  type COAOption,
   type MOEMetric,
   type MOPMetric,
   type SignatureItem,
   type ThreatEntity,
   type NarrativeThread,
   type RunningEstimate,
-  type IOPlannerStep,
-  type IOPlan,
 } from "@/lib/mock-data";
 import { type GCCId } from "@/lib/gcc-config";
 import { emptyOperationalState } from "@/lib/empty-state";
@@ -50,11 +47,6 @@ interface IEState {
   feeds: SensorFeed[];
   anomalyCount: number;
   markFeedProcessed: (id: string) => void;
-
-  // COA
-  coaOptions: COAOption[];
-  selectedCOA: string | null;
-  setSelectedCOA: (id: string | null) => void;
 
   // MOE/MOP
   moeMetrics: MOEMetric[];
@@ -129,16 +121,6 @@ interface IEState {
   setMediaFeeds: (feeds: MediaFeedItem[], fetchedAt: string) => void;
   setMediaFeedsLoading: (loading: boolean) => void;
   setMediaFeedsError: (err: string | null) => void;
-
-  // IO Planner
-  ioPlannerStep: IOPlannerStep;
-  ioPlannerMode: "builder" | "compare" | "documents";
-  draftIOPlan: Partial<IOPlan>;
-  setIOPlannerStep: (step: IOPlannerStep) => void;
-  setIOPlannerMode: (mode: "builder" | "compare" | "documents") => void;
-  updateDraftIOPlan: (updates: Partial<IOPlan>) => void;
-  resetDraftIOPlan: () => void;
-  addBuilderCOA: (coa: COAOption) => void;
 
   // System status
   lastRefresh: string;
@@ -228,7 +210,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       mediaFeedsFetchedAt: null,
       feeds: data.sensorFeeds,
       anomalyCount: data.sensorFeeds.filter((f) => f.anomaly).length,
-      coaOptions: data.coaOptions,
       moeMetrics: data.moeMetrics,
       mopMetrics: data.mopMetrics,
       threatEntities: data.threatEntities,
@@ -236,10 +217,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       runningEstimate: data.runningEstimate,
       signatureItems: data.signatureItems,
       alerts: buildAlertsForGCC(gcc),
-      selectedCOA: null,
-      ioPlannerStep: "target-audiences" as IOPlannerStep,
-      ioPlannerMode: "builder" as const,
-      draftIOPlan: {},
     });
   },
 
@@ -258,10 +235,6 @@ export const useIEStore = create<IEState>((set, get) => ({
     set((state) => ({
       feeds: state.feeds.map((f) => (f.id === id ? { ...f, processed: true } : f)),
     })),
-
-  coaOptions: initialData.coaOptions,
-  selectedCOA: null,
-  setSelectedCOA: (id) => set({ selectedCOA: id }),
 
   moeMetrics: initialData.moeMetrics,
   mopMetrics: initialData.mopMetrics,
@@ -316,8 +289,6 @@ export const useIEStore = create<IEState>((set, get) => ({
         (n: Omit<NarrativeThread, "id">, i: number) => ({ ...n, id: `NT-${gcc}-${i + 1}` })
       );
 
-      const coaOptions: COAOption[] = (a.coaOptions ?? []).map((c: COAOption) => ({ ...c }));
-
       const runningEstimate: RunningEstimate = {
         classification: json.classification ?? "UNCLASSIFIED // OSINT",
         dtg: nowDtg,
@@ -338,7 +309,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       set({
         threatEntities,
         narrativeThreads,
-        coaOptions,
         runningEstimate,
         suggestedMOE: Array.isArray(a.measuresOfEffectiveness) ? a.measuresOfEffectiveness : [],
         suggestedMOP: Array.isArray(a.measuresOfPerformance) ? a.measuresOfPerformance : [],
@@ -454,18 +424,6 @@ export const useIEStore = create<IEState>((set, get) => ({
     set({ mediaFeeds: feeds, mediaFeedsFetchedAt: fetchedAt, mediaFeedsLoading: false, mediaFeedsError: null }),
   setMediaFeedsLoading: (loading) => set({ mediaFeedsLoading: loading }),
   setMediaFeedsError: (err) => set({ mediaFeedsError: err, mediaFeedsLoading: false }),
-
-  ioPlannerStep: "target-audiences" as IOPlannerStep,
-  ioPlannerMode: "builder" as const,
-  draftIOPlan: {},
-  setIOPlannerStep: (step) => set({ ioPlannerStep: step }),
-  setIOPlannerMode: (mode) => set({ ioPlannerMode: mode }),
-  updateDraftIOPlan: (updates) =>
-    set((state) => ({ draftIOPlan: { ...state.draftIOPlan, ...updates } })),
-  resetDraftIOPlan: () =>
-    set({ draftIOPlan: {}, ioPlannerStep: "target-audiences" as IOPlannerStep }),
-  addBuilderCOA: (coa) =>
-    set((state) => ({ coaOptions: [...state.coaOptions, coa] })),
 
   lastRefresh: new Date().toISOString(),
   systemStatus: "ONLINE",

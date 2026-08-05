@@ -7,27 +7,33 @@ import { useLiveFeeds } from "@/hooks/useLiveFeeds";
 const PATHS = [
   {
     step: "1",
-    title: "See the information environment",
-    module: "cop",
-    desc: "Build a theater picture from open sources: themes, threat actors, media, and the daily information summary.",
+    title: "Live OSINT",
+    module: "sensor-fusion",
+    desc: "Theater-filtered open-source reporting, scored for information-operations relevance with a transparent, analyst-challengeable rubric.",
   },
   {
     step: "2",
-    title: "Speculate on adversary action",
-    module: "running-estimate",
-    desc: "Generate a draft estimate of what adversaries may do next in the IE — grounded in OSINT, labeled as speculation for human review.",
+    title: "News & daily summary",
+    module: "cop",
+    desc: "The day's information-environment picture: an AI executive summary of theater reporting, media feeds, and the themes that matter to an information officer.",
   },
   {
     step: "3",
-    title: "Plan the response",
-    module: "io-planner",
-    desc: "Turn the estimate into a course of action (COA), the information annex to the order (Annex I), and a draft tasking order (ITCO) for staff coordination.",
+    title: "Adversary activity",
+    module: "running-estimate",
+    desc: "Known threat actors with public attribution, hostile narratives, and a draft estimate of what adversaries may do next — labeled as speculation for human review.",
   },
   {
     step: "4",
-    title: "Protect friendly signatures",
-    module: "sigman",
-    desc: "Scan open sources for exposure that could help an adversary target or anticipate friendly activity.",
+    title: "Doctrine",
+    module: "doctrine",
+    desc: "Public doctrine and research for the information warfighting function — every entry carries a working public link.",
+  },
+  {
+    step: "5",
+    title: "S&T resources",
+    module: "s-and-t",
+    desc: "Journals, research organizations, conferences, and training for staying current on information science & technology.",
   },
 ];
 
@@ -60,14 +66,14 @@ export function DoctrinalOverview() {
       <header className="page-header">
         <div>
           <p className="label mb-1">1st MIG · III MEF · Marine Information Officers</p>
-          <h1 className="page-title">Capture the IE. Speculate on adversary action.</h1>
+          <h1 className="page-title">One source for the information environment.</h1>
           <p className="page-subtitle">
-            IE-SYNC is an open-source workbench for Information Officers. It helps you
-            characterize the military information environment from public reporting, then
-            draft reasoned speculation about what adversaries may do next — and how to
-            plan against it. Everything here is{" "}
+            IE-SYNC is a single open-source desk for military Information Officers. It
+            combines live OSINT, theater news, adversary activity, public doctrine, and
+            science &amp; technology resources — the daily read for understanding the
+            information environment. Everything here is{" "}
             <strong className="text-[var(--success)]">UNCLASSIFIED // OSINT</strong> and
-            requires human validation before command use.
+            AI-drafted content requires human validation before command use.
           </p>
         </div>
         <span className="trl-badge" title="Technology Readiness Level 4 — a working prototype under evaluation, not a fielded system">Prototype · TRL 4</span>
@@ -132,11 +138,11 @@ export function DoctrinalOverview() {
           >
             2 · {estimateReady ? "Review" : "Generate"} adversary estimate
           </button>
-          <button type="button" className="btn" onClick={() => setActiveModule("io-planner")}>
-            3 · Plan response
-          </button>
           <button type="button" className="btn" onClick={() => setActiveModule("doctrine")}>
             Public doctrine
+          </button>
+          <button type="button" className="btn" onClick={() => setActiveModule("s-and-t")}>
+            S&amp;T resources
           </button>
         </div>
         {!feedsReady && (
@@ -151,7 +157,7 @@ export function DoctrinalOverview() {
       {/* Workflow */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-[15px] font-bold m-0">How the product works</h2>
+          <h2 className="text-[15px] font-bold m-0">What&apos;s inside</h2>
           <div className="flex-1 h-px bg-[var(--border)]" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -187,10 +193,10 @@ export function DoctrinalOverview() {
           </h3>
           <ul className="m-0 pl-4 space-y-2 text-[14px] text-muted">
             <li>Theater-filtered open-source reporting about the information environment</li>
+            <li>A daily AI news summary of what the theater reporting says</li>
             <li>Known adversary actors and influence patterns (public attribution)</li>
-            <li>Draft speculation on adversary courses of action in the IE</li>
-            <li>Planning products (COA, Annex I, ITCO) for staff coordination</li>
-            <li>Public research links only in the doctrine library</li>
+            <li>Draft speculation on adversary activity in the IE, cited to open sources</li>
+            <li>Public doctrine and S&amp;T resources — research links with public URLs only</li>
           </ul>
         </div>
         <div className="panel">
