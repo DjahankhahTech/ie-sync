@@ -19,9 +19,9 @@ const PATHS = [
   },
   {
     step: "3",
-    title: "Adversary activity",
+    title: "Adversary narrative",
     module: "running-estimate",
-    desc: "Known threat actors with public attribution, hostile narratives, and a draft estimate of what adversaries may do next — labeled as speculation for human review.",
+    desc: "A live, labeled feed of the state-controlled media anti-US audiences read in this theater, plus attributed threat actors and a daily draft estimate of what they may push next.",
   },
   {
     step: "4",
@@ -69,7 +69,7 @@ export function DoctrinalOverview() {
           <h1 className="page-title">One source for the information environment.</h1>
           <p className="page-subtitle">
             IE-SYNC is a single open-source desk for military Information Officers. It
-            combines live OSINT, theater news, adversary activity, public doctrine, and
+            combines live OSINT, theater news, the adversary narrative space, public doctrine, and
             science &amp; technology resources — the daily read for understanding the
             information environment. Everything here is{" "}
             <strong className="text-[var(--success)]">UNCLASSIFIED // OSINT</strong> and

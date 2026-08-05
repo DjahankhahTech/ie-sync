@@ -9,7 +9,7 @@ const modules: { id: string; label: string; hint: string }[] = [
   { id: "cop", label: "Information Environment", hint: "Daily summary, news, and themes" },
   { id: "ie-map", label: "Map", hint: "Layers & locations" },
   { id: "sensor-fusion", label: "Live OSINT", hint: "Open-source feeds" },
-  { id: "running-estimate", label: "Adversary Activity", hint: "What they may do next" },
+  { id: "running-estimate", label: "Adversary Narrative", hint: "What anti-US audiences are reading" },
   { id: "sigman", label: "Signatures", hint: "Friendly exposure" },
   { id: "doctrine", label: "Public Doctrine", hint: "Open research links" },
   { id: "s-and-t", label: "S&T", hint: "Research resources" },
@@ -36,7 +36,7 @@ export function Sidebar() {
               IE-SYNC
             </div>
             <div className="text-[12px] text-[var(--muted)] mt-0.5 truncate">
-              OSINT · Doctrine · News · Adversary activity · S&T — one source for information officers
+              OSINT · Doctrine · News · Adversary narrative · S&T — one source for information officers
             </div>
           </div>
         </div>

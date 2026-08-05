@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useIEStore } from "@/store/ie-store";
 import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
+import { AdversaryMediaReader } from "./AdversaryMediaReader";
 import {
   LineChart,
   Line,
@@ -165,14 +166,18 @@ export function RunningEstimateModule() {
     <div className="page-scroll page-scroll-wide">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Adversary activity</h1>
+          <h1 className="page-title">Adversary narrative</h1>
           <p className="page-subtitle">
-            Known actors, hostile narratives, and draft speculation on likely next moves in
-            the information environment — grounded in open-source reporting. Review,
-            challenge, and revise before any briefing.
+            What anti-American audiences in this theater are reading right now — live from
+            adversary state-controlled media — followed by the daily AI-drafted estimate of
+            the actors and narratives behind it. Review, challenge, and revise before any
+            briefing.
           </p>
         </div>
       </header>
+
+      {/* Live adversary state-media reader — the narrative space itself */}
+      <AdversaryMediaReader />
 
       {/* AI Assessment engine */}
       <div className="panel border-[var(--accent-dim)]">

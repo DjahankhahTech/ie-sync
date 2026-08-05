@@ -42,7 +42,7 @@ function cleanupMaps() {
 }
 
 // ── Public paths (no auth required) ───────────────────────────────────────
-const PUBLIC_PATHS = ["/api/auth", "/api/health", "/api/feeds", "/api/infsum", "/api/link-check", "/api/analyze", "/api/sigman", "/api/flights", "/api/cables", "/api/ships", "/api/st-feed", "/api/doctrine", "/api/history", "/api/infsum-ai", "/api/infsum-cron"];
+const PUBLIC_PATHS = ["/api/auth", "/api/health", "/api/feeds", "/api/infsum", "/api/link-check", "/api/analyze", "/api/adversary-media", "/api/sigman", "/api/flights", "/api/cables", "/api/ships", "/api/st-feed", "/api/doctrine", "/api/history", "/api/infsum-ai", "/api/infsum-cron"];
 
 // ── Development mode flag ─────────────────────────────────────────────────
 // In development, allow unauthenticated API access for local testing.

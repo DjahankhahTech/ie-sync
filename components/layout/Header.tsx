@@ -8,7 +8,7 @@ import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
 const moduleMeta: Record<string, { title: string; blurb: string }> = {
   home: {
     title: "Home",
-    blurb: "One open-source desk: OSINT, doctrine, news, adversary activity, and S&T",
+    blurb: "One open-source desk: OSINT, doctrine, news, adversary narrative, and S&T",
   },
   cop: {
     title: "Information Environment",
@@ -19,8 +19,8 @@ const moduleMeta: Record<string, { title: string; blurb: string }> = {
     blurb: "Physical, informational, and cognitive layers on the map",
   },
   "running-estimate": {
-    title: "Adversary Activity",
-    blurb: "What the OSINT suggests adversaries may do next — draft for human review",
+    title: "Adversary Narrative",
+    blurb: "What anti-US audiences are reading in this theater, and the estimate behind it",
   },
   "sensor-fusion": {
     title: "Live OSINT",

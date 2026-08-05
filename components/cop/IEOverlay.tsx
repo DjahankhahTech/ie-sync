@@ -66,8 +66,8 @@ export function IEOverlay() {
           <h1 className="page-title">Information environment — {gcc.abbr}</h1>
           <p className="page-subtitle">
             Open-source picture of the military information environment for this theater.
-            Use it to see what is happening, then open the Adversary Estimate to speculate
-            on what they may do next.
+            Use it to see what is happening, then open Adversary Narrative to see what
+            anti-US audiences are reading and what may come next.
           </p>
         </div>
         <button
@@ -143,7 +143,7 @@ export function IEOverlay() {
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-primary" onClick={() => setActiveModule("running-estimate")}>
-          Adversary activity
+          Adversary narrative
         </button>
         <button type="button" className="btn" onClick={() => setActiveModule("sensor-fusion")}>
           Triage OSINT
@@ -178,7 +178,7 @@ export function IEOverlay() {
               className="btn"
               onClick={() => setActiveModule("running-estimate")}
             >
-              Open adversary estimate
+              Open adversary narrative
             </button>
           </div>
         </div>
