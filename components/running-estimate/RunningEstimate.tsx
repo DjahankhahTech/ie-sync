@@ -131,7 +131,7 @@ export function RunningEstimateModule() {
   useEffect(() => { setNowDTG(new Date().toISOString().substring(0, 16)); }, []);
 
   // Auto-load the day's cached AI assessment on mount / AOR change (does not
-  // regenerate — served from the daily cache warmed by cron at 06:00 ET).
+  // regenerate — served from the daily cache warmed by cron at 0500 ET).
   useEffect(() => {
     if (!assessment && !assessmentLoading) generateAssessment(activeGCC);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,17 +181,12 @@ export function RunningEstimateModule() {
             <h2 className="panel-title">Generate from live OSINT</h2>
             <p className="text-[14px] text-muted m-0 mt-1 max-w-2xl">
               Drafts the estimate, threat picture, and hostile narratives from open sources.
-              Cached daily; refresh pulls the latest articles.
+              Published once daily at 0500 Eastern — every viewer sees the same product.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => generateAssessment(activeGCC, true)}
-            disabled={assessmentLoading}
-            className="btn btn-primary"
-          >
-            {assessmentLoading ? "Analyzing OSINT…" : "Refresh from latest sources"}
-          </button>
+          <span className="btn btn-ghost cursor-default">
+            {assessmentLoading ? "Loading today's estimate…" : "Daily product · 0500 ET"}
+          </span>
         </div>
         {assessmentError && (
           <div className="notice notice-danger mt-3">✗ {assessmentError}</div>
@@ -398,7 +393,7 @@ export function RunningEstimateModule() {
               <div className="text-[11px] text-[#94a3b8] font-bold">No recorded history yet</div>
               <div className="text-[10px] text-[#64748b] leading-relaxed max-w-md">
                 {historyEnabled
-                  ? "This chart plots only assessments this system actually generated and stored. The archive fills as the 0600/1200/1800 ET runs execute — expect a readable trend after roughly three days."
+                  ? "This chart plots only assessments this system actually generated and stored. The archive fills as the daily 0500 ET run executes — expect a readable trend after roughly a week."
                   : "This system isn't set up to save past assessments yet, so no trend can be shown. Ask the system admin to enable history storage."}
               </div>
               <div className="text-[9px] text-[#475569] mt-1">

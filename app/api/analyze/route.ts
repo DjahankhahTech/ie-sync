@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { DAILY_SLOT, productDayET } from "@/lib/daily-product";
 import { unstable_cache } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { GCC_CONFIGS, type GCCId } from "@/lib/gcc-config";
@@ -167,27 +168,17 @@ async function fetchAORItems(gccId: GCCId, origin: string): Promise<FeedItemInpu
   return [];
 }
 
-// Current ET assessment slot — the running estimate is posted at 0600 / 1200 /
-// 1800 ET (warmed by /api/infsum-cron at those times).
-function currentSlotET(): string {
-  const hourStr = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", hour12: false }).format(new Date());
-  const h = parseInt(hourStr, 10);
-  return h >= 18 ? "1800" : h >= 12 ? "1200" : h >= 6 ? "0600" : "0000";
-}
-
-// Cached Running-Estimate assessment, posted 3x daily (0600/1200/1800 ET).
-// `?force=1` regenerates from the latest sources.
+// Published once per day for everyone; rolls over at 0500 ET (see lib/daily-product).
 export async function GET(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI engine not configured — ANTHROPIC_API_KEY is not set." }, { status: 503 });
   }
   const { searchParams, origin } = new URL(request.url);
   const gccId = (searchParams.get("gcc") ?? "INDOPACOM") as GCCId;
-  const force = searchParams.get("force") === "1";
   if (!GCC_CONFIGS[gccId]) return NextResponse.json({ error: "Invalid GCC" }, { status: 400 });
 
-  const dayET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-  const slot = currentSlotET();
+  const dayET = productDayET();
+  const slot = DAILY_SLOT;
   // Throw on error so failures are NOT cached (unstable_cache only caches
   // resolved values); the cache key carries a version segment to flush old
   // entries when the schema/logic changes.
@@ -214,9 +205,7 @@ export async function GET(request: NextRequest) {
     return r;
   };
   try {
-    const data = force
-      ? await gen()
-      : await unstable_cache(gen, ["analyze", "v3", gccId, dayET, slot], { revalidate: 21600, tags: ["analyze", `analyze-${gccId}`] })();
+    const data = await unstable_cache(gen, ["analyze", "v4", gccId, dayET], { revalidate: 86400, tags: ["analyze", `analyze-${gccId}`] })();
     return NextResponse.json({ ...data, day: dayET, slot });
   } catch (e) {
     const err = e as Error & { status?: number };

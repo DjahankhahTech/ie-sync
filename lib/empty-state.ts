@@ -2,7 +2,7 @@
  * Empty operational state. The app no longer ships fabricated theater
  * intelligence — threat entities, narratives, MOE/MOP, signatures, and
  * the running estimate all start EMPTY. They are populated from:
- *   - live OSINT (/api/feeds, /api/infsum, /api/media-feeds), and
+ *   - live OSINT (/api/feeds, /api/infsum), and
  *   - the Claude-backed AI assessment (/api/analyze), via generateAssessment().
  * Modules with no real data source render an honest "no data" state until an
  * analyst connects a feed or enters data.

@@ -8,7 +8,6 @@ import { threatColor, confidenceColor } from "@/lib/utils";
 import { useLiveFeeds } from "@/hooks/useLiveFeeds";
 import { GlossaryPanel } from "@/components/ui/GlossaryPanel";
 import { DailyINFSUM } from "@/components/infsum/DailyINFSUM";
-import { MediaFeedPanel } from "@/components/media-feeds/MediaFeedPanel";
 import { PMESIIMap } from "./PMESIIMap";
 import {
   getMetricDefinition,
@@ -206,8 +205,6 @@ export function IEOverlay() {
       {/* ── Daily Information Summary ───────────────────────────── */}
       <DailyINFSUM />
 
-      {/* ── IE Media Feed (Video/Image OSINT) ───────────────────── */}
-      <MediaFeedPanel />
 
       {/* IE Tactical Overlay map + Narrative Threat Board now live in the dedicated TACTICAL MAP tab */}
 

@@ -30,7 +30,7 @@ export function AppShell() {
   const ActiveComponent = moduleMap[activeModule] ?? DoctrinalOverview;
 
   // Warm the day's AI products (Running Estimate, INFSUM summary, SIGMAN) in the
-  // background as soon as the app loads / AOR changes — they're posted 3x daily
+  // background as soon as the app loads / AOR changes — they're published once daily
   // (0600/1200/1800 ET) and server-cached, so this is a fast cache hit and tabs
   // open already-populated (no first-visit loading spinner).
   useEffect(() => {

@@ -15,7 +15,7 @@ const PATHS = [
     step: "2",
     title: "News & daily summary",
     module: "cop",
-    desc: "The day's information-environment picture: an AI executive summary of theater reporting, media feeds, and the themes that matter to an information officer.",
+    desc: "The day's information-environment picture: an AI executive summary of theater reporting and the themes that matter to an information officer.",
   },
   {
     step: "3",

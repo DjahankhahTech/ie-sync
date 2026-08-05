@@ -39,7 +39,7 @@ body {
     "Helvetica Neue",
     Arial,
     sans-serif;
-  font-size: 15px;
+  font-size: 16.5px;
   line-height: 1.6;
   letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
@@ -118,7 +118,7 @@ code,
 }
 
 .page-title {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--foreground);
@@ -128,7 +128,7 @@ code,
 
 .page-subtitle {
   margin: 0.35rem 0 0;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--muted);
   max-width: 52rem;
   line-height: 1.55;
@@ -185,7 +185,7 @@ code,
 
 /* ── Typography helpers ────────────────────────────────────────────────────── */
 .label {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -193,7 +193,7 @@ code,
 }
 
 .text-body {
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.6;
   color: var(--foreground);
 }
@@ -303,7 +303,7 @@ code,
   line-height: 1.1;
 }
 .stat-pill-label {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
@@ -312,7 +312,7 @@ code,
   padding: 0.85rem 1rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.55;
   color: var(--muted);
 }
@@ -380,7 +380,7 @@ code,
 .classification-banner {
   text-align: center;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   letter-spacing: 0.08em;
   padding: 0.4rem 0.75rem;
   flex-shrink: 0;
@@ -393,7 +393,7 @@ code,
 
 .trl-badge {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 0.25rem 0.55rem;
@@ -432,14 +432,14 @@ code,
 table.data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 table.data-table th {
   text-align: left;
   padding: 0.65rem 0.85rem;
   color: var(--muted);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--border);
@@ -454,3 +454,19 @@ table.data-table td {
 table.data-table tr:hover td {
   background: var(--card-hover);
 }
+
+
+/* ── Legibility floor (2026-08-04) ──────────────────────────────────────────
+   Digital readers found the UI text too small. Components still use tiny
+   Tailwind arbitrary sizes in dense layouts; rather than touch hundreds of
+   call sites, floor them globally. Nothing user-facing renders below ~12px. */
+.text-\[8px\]  { font-size: 12px !important; }
+.text-\[9px\]  { font-size: 12px !important; }
+.text-\[10px\] { font-size: 12.5px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+.text-\[12px\] { font-size: 13.5px !important; }
+.text-\[13px\] { font-size: 14.5px !important; }
+.text-\[14px\] { font-size: 15.5px !important; }
+.text-\[15px\] { font-size: 16.5px !important; }
+.text-xs { font-size: 13.5px !important; }
+.text-sm { font-size: 15px !important; }

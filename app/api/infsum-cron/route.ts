@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GCC_CONFIGS } from "@/lib/gcc-config";
 
-// Daily warm-up for the AI Daily Information Summary. Triggered by a Vercel
-// Cron at 06:00 ET (see vercel.json). Generates + caches the day's summary for
-// every CCMD so analysts get an instant, ready-to-go INFSUM each morning.
+// Daily warm-up for all AI products. Triggered by a single Vercel Cron at
+// 10:00 UTC — 0500 EST (0600 EDT in summer; Vercel crons are fixed-UTC).
+// Generates + caches the day's estimate, INFSUM, and SIGMAN for every CCMD so
+// every viewer sees the same once-a-day product with no client-side generation.
 
 export const maxDuration = 300;
 
@@ -17,9 +18,8 @@ export async function GET(request: NextRequest) {
 
   const { origin } = new URL(request.url);
   const gccs = Object.keys(GCC_CONFIGS);
-  // All three AI products are posted 3x daily (0600/1200/1800 ET). This job runs
-  // at each of those times and warms the current slot's cache for every CCMD so
-  // analysts land on ready-to-go products with no client-side generation.
+  // All three AI products publish once per day (rollover 0500 ET). This job
+  // warms the day's cache for every CCMD right at rollover.
   const targets = [
     ...gccs.map((g) => `${origin}/api/infsum-ai?gcc=${g}`),
     ...gccs.map((g) => `${origin}/api/analyze?gcc=${g}`),

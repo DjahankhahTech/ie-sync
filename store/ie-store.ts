@@ -14,7 +14,6 @@ import { type GCCId } from "@/lib/gcc-config";
 import { emptyOperationalState } from "@/lib/empty-state";
 import { type LiveFeedItem } from "@/app/api/feeds/route";
 import { type DailyINFSUM } from "@/app/api/infsum/route";
-import { type MediaFeedItem } from "@/app/api/media-feeds/route";
 
 interface Alert {
   id: string;
@@ -69,19 +68,19 @@ interface IEState {
   // AI-proposed potential measures (one-line statements, populated after an assessment)
   suggestedMOE: string[];
   suggestedMOP: string[];
-  generateAssessment: (gcc: GCCId, force?: boolean) => Promise<void>;
+  generateAssessment: (gcc: GCCId) => Promise<void>;
 
-  // AI Executive Summary (INFSUM) — posted 3x daily, prefetched in background
+  // AI Executive Summary (INFSUM) — published once daily (0500 ET), prefetched in background
   aiSummary: AISummaryResult | null;
   aiSummaryLoading: boolean;
   aiSummaryError: string | null;
-  loadAISummary: (gcc: GCCId, force?: boolean) => Promise<void>;
+  loadAISummary: (gcc: GCCId) => Promise<void>;
 
-  // SIGMAN open-source OPSEC scan — posted 3x daily, prefetched in background
+  // SIGMAN open-source OPSEC scan — published once daily (0500 ET), prefetched in background
   sigman: SigmanResult | null;
   sigmanLoading: boolean;
   sigmanError: string | null;
-  loadSigman: (gcc: GCCId, force?: boolean) => Promise<void>;
+  loadSigman: (gcc: GCCId) => Promise<void>;
 
   // Warm all three AI products (assessment, INFSUM summary, SIGMAN) for an AOR
   // in the background so tabs open already-populated (no first-visit spinner).
@@ -113,14 +112,6 @@ interface IEState {
   setINFSUMLoading: (loading: boolean) => void;
   setINFSUMError: (err: string | null) => void;
 
-  // Media feeds (video/image)
-  mediaFeeds: MediaFeedItem[];
-  mediaFeedsLoading: boolean;
-  mediaFeedsError: string | null;
-  mediaFeedsFetchedAt: string | null;
-  setMediaFeeds: (feeds: MediaFeedItem[], fetchedAt: string) => void;
-  setMediaFeedsLoading: (loading: boolean) => void;
-  setMediaFeedsError: (err: string | null) => void;
 
   // System status
   lastRefresh: string;
@@ -206,8 +197,6 @@ export const useIEStore = create<IEState>((set, get) => ({
       liveFeedsFetchedAt: null,
       infsum: null,
       infsumFetchedAt: null,
-      mediaFeeds: [],
-      mediaFeedsFetchedAt: null,
       feeds: data.sensorFeeds,
       anomalyCount: data.sensorFeeds.filter((f) => f.anomaly).length,
       moeMetrics: data.moeMetrics,
@@ -251,12 +240,11 @@ export const useIEStore = create<IEState>((set, get) => ({
   assessmentError: null,
   suggestedMOE: [],
   suggestedMOP: [],
-  generateAssessment: async (gcc, force) => {
+  generateAssessment: async (gcc) => {
     set({ assessmentLoading: true, assessmentError: null });
     try {
       // Cached daily assessment (server fetches OSINT + caches per ET-day);
-      // force=1 regenerates from the latest sources.
-      const res = await fetch(`/api/analyze?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const res = await fetch(`/api/analyze?gcc=${gcc}`);
       const json = await res.json();
       if (!res.ok || json.error || !json.assessment) {
         set({ assessmentLoading: false, assessmentError: json.error ?? `Assessment failed (${res.status})` });
@@ -330,10 +318,10 @@ export const useIEStore = create<IEState>((set, get) => ({
   aiSummary: null,
   aiSummaryLoading: false,
   aiSummaryError: null,
-  loadAISummary: async (gcc, force) => {
+  loadAISummary: async (gcc) => {
     set({ aiSummaryLoading: true, aiSummaryError: null });
     try {
-      const r = await fetch(`/api/infsum-ai?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const r = await fetch(`/api/infsum-ai?gcc=${gcc}`);
       const j = await r.json();
       if (!r.ok || j.error || !j.summary) {
         set({ aiSummaryLoading: false, aiSummaryError: j.error ?? `Summary unavailable (${r.status})` });
@@ -348,10 +336,10 @@ export const useIEStore = create<IEState>((set, get) => ({
   sigman: null,
   sigmanLoading: false,
   sigmanError: null,
-  loadSigman: async (gcc, force) => {
+  loadSigman: async (gcc) => {
     set({ sigmanLoading: true, sigmanError: null });
     try {
-      const r = await fetch(`/api/sigman?gcc=${gcc}${force ? "&force=1" : ""}`);
+      const r = await fetch(`/api/sigman?gcc=${gcc}`);
       const j = await r.json();
       if (!r.ok || j.error || !j.assessment) {
         set({ sigmanLoading: false, sigmanError: j.error ?? `Scan unavailable (${r.status})` });
@@ -416,14 +404,6 @@ export const useIEStore = create<IEState>((set, get) => ({
   setINFSUMLoading: (loading) => set({ infsumLoading: loading }),
   setINFSUMError: (err) => set({ infsumError: err, infsumLoading: false }),
 
-  mediaFeeds: [],
-  mediaFeedsLoading: false,
-  mediaFeedsError: null,
-  mediaFeedsFetchedAt: null,
-  setMediaFeeds: (feeds, fetchedAt) =>
-    set({ mediaFeeds: feeds, mediaFeedsFetchedAt: fetchedAt, mediaFeedsLoading: false, mediaFeedsError: null }),
-  setMediaFeedsLoading: (loading) => set({ mediaFeedsLoading: loading }),
-  setMediaFeedsError: (err) => set({ mediaFeedsError: err, mediaFeedsLoading: false }),
 
   lastRefresh: new Date().toISOString(),
   systemStatus: "ONLINE",
