@@ -21,6 +21,7 @@
  */
 
 import raw from "./military-library.generated.json";
+import additionsRaw from "./military-library.additions.json";
 
 // ── Model ────────────────────────────────────────────────────────────────────
 
@@ -80,7 +81,36 @@ interface GeneratedCatalog {
 
 const catalog = raw as unknown as GeneratedCatalog;
 
-export const LIBRARY_SOURCES: LibrarySource[] = catalog.sources;
+interface AdditionsFile {
+  comment?: string;
+  sources: LibrarySource[];
+}
+
+const additions = additionsRaw as unknown as AdditionsFile;
+
+/**
+ * Hand-curated sources appended after the drive-synced catalog (see
+ * lib/military-library.additions.json). Any addition whose `id` or `url`
+ * duplicates the catalog — or an earlier addition — is dropped, so the
+ * additions file can be appended to freely without producing duplicates.
+ */
+function mergeAdditions(base: LibrarySource[], extra: LibrarySource[]): LibrarySource[] {
+  const seenIds = new Set(base.map((s) => s.id));
+  const seenUrls = new Set(base.map((s) => s.url).filter((u): u is string => Boolean(u)));
+  const merged = [...base];
+
+  for (const s of extra) {
+    if (seenIds.has(s.id)) continue;
+    if (s.url && seenUrls.has(s.url)) continue;
+    merged.push(s);
+    seenIds.add(s.id);
+    if (s.url) seenUrls.add(s.url);
+  }
+
+  return merged;
+}
+
+export const LIBRARY_SOURCES: LibrarySource[] = mergeAdditions(catalog.sources, additions.sources);
 export const LIBRARY_COMPONENTS: LibraryComponent[] = catalog.components;
 export const LIBRARY_COUNTS = catalog.counts;
 export const LIBRARY_ROOT = catalog.libraryRoot;
